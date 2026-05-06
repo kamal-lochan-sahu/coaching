@@ -1,4 +1,13 @@
 import { Router } from "express";
+import { getEnquiries, createEnquiry, getEnquiry, updateEnquiry, addFollowUp, convertToStudent, getEnquiryStats } from "../controllers/enquiry.controller.js";
+import { protect, allRoles, adminAndAbove } from "../middleware/auth.middleware.js";
 const router = Router();
-// TODO: Day 3+ — implement enquiry routes
+router.use(protect);
+router.get("/",       allRoles, getEnquiries);
+router.post("/",      allRoles, createEnquiry);
+router.get("/stats",  allRoles, getEnquiryStats);
+router.get("/:id",            allRoles, getEnquiry);
+router.put("/:id",            allRoles, updateEnquiry);
+router.post("/:id/followup",  allRoles, addFollowUp);
+router.put("/:id/convert",    adminAndAbove, convertToStudent);
 export default router;

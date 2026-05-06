@@ -1,4 +1,12 @@
 import { Router } from "express";
+import { getTests, createTest, getTest, updateTest, enterResults, getTestResults } from "../controllers/test.controller.js";
+import { protect, teacherAndAbove, allRoles } from "../middleware/auth.middleware.js";
 const router = Router();
-// TODO: Day 3+ — implement test routes
+router.use(protect);
+router.get("/",    allRoles, getTests);
+router.post("/",   teacherAndAbove, createTest);
+router.get("/:id",           allRoles, getTest);
+router.put("/:id",           teacherAndAbove, updateTest);
+router.post("/:id/results",  teacherAndAbove, enterResults);
+router.get("/:id/results",   allRoles, getTestResults);
 export default router;

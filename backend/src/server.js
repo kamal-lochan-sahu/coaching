@@ -4,6 +4,9 @@ import connectDB from "./config/db.js";
 import { connectRedis } from "./config/redis.js";
 import { connectEmail } from "./config/email.js";
 import { connectTwilio } from "./config/twilio.js";
+import { startFeeReminderJob } from "./jobs/feeReminder.job.js";
+import { startAttendanceAlertJob } from "./jobs/attendanceAlert.job.js";
+import { startFollowUpReminderJob } from "./jobs/followUpReminder.job.js";
 
 const PORT = process.env.PORT || 5000;
 
@@ -15,6 +18,11 @@ const startServer = async () => {
     await connectRedis();
     await connectEmail();
     connectTwilio();
+
+    // Start cron jobs
+    startFeeReminderJob();
+    startAttendanceAlertJob();
+    startFollowUpReminderJob();
 
     const server = app.listen(PORT, () => {
       console.log("==========================================");
@@ -37,8 +45,8 @@ const startServer = async () => {
 
     process.on("SIGTERM", () => shutdown("SIGTERM"));
     process.on("SIGINT",  () => shutdown("SIGINT"));
-    process.on("unhandledRejection", (reason) => console.error("💥 Unhandled:", reason));
-    process.on("uncaughtException",  (error)  => { console.error("💥 Uncaught:", error); process.exit(1); });
+    process.on("unhandledRejection", (r) => console.error("💥 Unhandled:", r));
+    process.on("uncaughtException",  (e) => { console.error("💥 Uncaught:", e); process.exit(1); });
 
   } catch (error) {
     console.error("❌ Startup failed:", error.message);

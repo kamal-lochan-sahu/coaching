@@ -1,4 +1,17 @@
 import { Router } from "express";
+import { getStudents, searchStudents, createStudent, getStudent, updateStudent, deleteStudent, getStudentAttendance, getStudentFees, getStudentResults, getStudentHistory, transferStudent } from "../controllers/student.controller.js";
+import { protect, adminAndAbove, teacherAndAbove, allRoles } from "../middleware/auth.middleware.js";
 const router = Router();
-// TODO: Day 3+ — implement student routes
+router.use(protect);
+router.get("/search", searchStudents);
+router.get("/",       allRoles, getStudents);
+router.post("/",      adminAndAbove, createStudent);
+router.get("/:id",            allRoles, getStudent);
+router.put("/:id",            adminAndAbove, updateStudent);
+router.delete("/:id",         adminAndAbove, deleteStudent);
+router.get("/:id/history",    allRoles, getStudentHistory);
+router.get("/:id/attendance", allRoles, getStudentAttendance);
+router.get("/:id/fees",       allRoles, getStudentFees);
+router.get("/:id/results",    allRoles, getStudentResults);
+router.put("/:id/transfer",   adminAndAbove, transferStudent);
 export default router;

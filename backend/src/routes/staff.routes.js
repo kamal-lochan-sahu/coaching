@@ -1,4 +1,12 @@
 import { Router } from "express";
+import { getStaff, addStaff, getStaffMember, updateStaff, paySalary, getSalaryHistory } from "../controllers/staff.controller.js";
+import { protect, adminAndAbove, ownerOnly, allRoles } from "../middleware/auth.middleware.js";
 const router = Router();
-// TODO: Day 3+ — implement staff routes
+router.use(protect);
+router.get("/",    allRoles, getStaff);
+router.post("/",   ownerOnly, addStaff);
+router.get("/:id",             allRoles, getStaffMember);
+router.put("/:id",             adminAndAbove, updateStaff);
+router.post("/:id/salary",     ownerOnly, paySalary);
+router.get("/:id/salary-history", ownerOnly, getSalaryHistory);
 export default router;

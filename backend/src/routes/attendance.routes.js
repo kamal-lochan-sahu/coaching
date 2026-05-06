@@ -1,4 +1,10 @@
 import { Router } from "express";
+import { markAttendance, getBatchAttendance, getAttendanceReport, getLowAttendance } from "../controllers/attendance.controller.js";
+import { protect, teacherAndAbove, allRoles } from "../middleware/auth.middleware.js";
 const router = Router();
-// TODO: Day 3+ — implement attendance routes
+router.use(protect);
+router.post("/mark",                  teacherAndAbove, markAttendance);
+router.get("/batch/:batchId",         allRoles, getBatchAttendance);
+router.get("/report",                 allRoles, getAttendanceReport);
+router.get("/low-attendance",         allRoles, getLowAttendance);
 export default router;
