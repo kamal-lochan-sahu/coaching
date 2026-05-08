@@ -1,172 +1,139 @@
 import { useQuery } from "@tanstack/react-query";
-import { Users, BookOpen, CreditCard, AlertCircle, MessageSquare, TrendingDown, ClipboardCheck, TrendingUp, ArrowUpRight, ArrowDownRight, GraduationCap } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import api from "../services/api";
 import Loader from "../components/ui/Loader";
 import { useAuthStore } from "../store/authStore";
 
-const StatCard = ({ title, value, sub, icon: Icon, color, bg, trend }) => (
-  <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-    <div className="flex items-start justify-between">
-      <div className="flex-1">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{title}</p>
-        <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-        {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
-      </div>
-      <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: bg }}>
-        <Icon size={22} style={{ color }} />
-      </div>
+const Card = ({ label, value, sub, emoji, accent = "#1a56db", light = "#eff6ff" }) => (
+  <div style={{ background:"#fff", borderRadius:"16px", padding:"22px 24px", border:"1px solid #f1f5f9", boxShadow:"0 1px 4px rgba(0,0,0,0.05)" }}>
+    <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:"14px" }}>
+      <p style={{ fontSize:"12px", fontWeight:600, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.6px" }}>{label}</p>
+      <div style={{ width:"38px", height:"38px", background:light, borderRadius:"10px", display:"flex", alignItems:"center", justifyContent:"center", fontSize:"18px" }}>{emoji}</div>
     </div>
-    {trend !== undefined && (
-      <div className={`flex items-center gap-1 mt-3 text-xs font-medium ${trend >= 0 ? "text-green-600" : "text-red-500"}`}>
-        {trend >= 0 ? <ArrowUpRight size={14}/> : <ArrowDownRight size={14}/>}
-        {Math.abs(trend)}% vs last month
-      </div>
-    )}
+    <p style={{ fontSize:"26px", fontWeight:800, color:"#0f172a", lineHeight:1 }}>{value}</p>
+    {sub && <p style={{ fontSize:"12px", color:"#94a3b8", marginTop:"6px" }}>{sub}</p>}
   </div>
 );
 
 const CustomTooltip = ({ active, payload, label }) => {
-  if (active && payload?.length) {
-    return (
-      <div className="bg-white border border-gray-100 rounded-xl p-3 shadow-lg text-xs">
-        <p className="font-semibold text-gray-700 mb-1">{label}</p>
-        {payload.map(p => (
-          <p key={p.name} style={{ color: p.color }}>
-            {p.name}: ₹{p.value.toLocaleString()}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:"10px", padding:"10px 14px", boxShadow:"0 4px 12px rgba(0,0,0,0.08)", fontSize:"12px" }}>
+      <p style={{ fontWeight:700, color:"#374151", marginBottom:"6px" }}>{label}</p>
+      {payload.map(p => <p key={p.name} style={{ color:p.color, margin:"2px 0" }}>{p.name}: ₹{p.value.toLocaleString()}</p>)}
+    </div>
+  );
 };
 
 export default function Dashboard() {
   const user = useAuthStore(s => s.user);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: () => api.get("/analytics/dashboard").then(r => r.data.data),
-  });
-
-  const { data: chart } = useQuery({
-    queryKey: ["revenue-chart"],
-    queryFn: () => api.get("/analytics/revenue").then(r => r.data.data),
-  });
+  const { data, isLoading } = useQuery({ queryKey:["dashboard"], queryFn: () => api.get("/analytics/dashboard").then(r=>r.data.data) });
+  const { data: chart }     = useQuery({ queryKey:["revenue-chart"], queryFn: () => api.get("/analytics/revenue").then(r=>r.data.data) });
 
   if (isLoading) return <Loader text="Loading dashboard..." />;
   const d = data || {};
   const attPct = d.attendance?.today?.percentage || 0;
-  const attColor = attPct >= 80 ? "#10b981" : attPct >= 60 ? "#f59e0b" : "#ef4444";
-
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const profit = (d.fees?.collectedThisMonth || 0) - (d.expenses?.thisMonth || 0);
 
   return (
-    <div className="space-y-6">
+    <div style={{ display:"flex", flexDirection:"column", gap:"28px" }}>
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div>
-          <p className="text-gray-400 text-sm">{greeting},</p>
-          <h1 className="text-2xl font-bold text-gray-900">{user?.name} 👋</h1>
-          <p className="text-sm text-gray-400 mt-0.5">
-            {new Date().toLocaleDateString("en-IN", { weekday:"long", year:"numeric", month:"long", day:"numeric" })}
+          <p style={{ fontSize:"13px", color:"#94a3b8", marginBottom:"4px" }}>{greeting} 👋</p>
+          <h1 style={{ fontSize:"26px", fontWeight:800, color:"#0f172a" }}>{user?.name}</h1>
+          <p style={{ fontSize:"13px", color:"#94a3b8", marginTop:"2px" }}>
+            {new Date().toLocaleDateString("en-IN",{ weekday:"long", day:"numeric", month:"long", year:"numeric" })}
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
-          <GraduationCap size={18} className="text-blue-600" />
-          <span className="text-sm font-semibold text-blue-700">{user?.branding?.instituteName || "EduManage"}</span>
+        <div style={{ background:"linear-gradient(135deg,#1a56db,#1e3a8a)", padding:"10px 20px", borderRadius:"12px", display:"flex", alignItems:"center", gap:"10px" }}>
+          <span style={{ fontSize:"20px" }}>🎓</span>
+          <div>
+            <p style={{ color:"rgba(255,255,255,0.7)", fontSize:"11px" }}>Institute</p>
+            <p style={{ color:"#fff", fontWeight:700, fontSize:"14px" }}>{user?.branding?.instituteName || "EduManage"}</p>
+          </div>
         </div>
       </div>
 
-      {/* Primary Stats */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard title="Total Students"    value={d.students?.total || 0}
-          sub={`${d.students?.active || 0} active · ${d.students?.newThisMonth || 0} new this month`}
-          icon={Users} color="#3b82f6" bg="#eff6ff" />
-
-        <StatCard title="Today Attendance"
-          value={<span style={{ color: attColor }}>{attPct}%</span>}
-          sub={`${d.attendance?.today?.present || 0} present out of ${d.attendance?.today?.total || 0}`}
-          icon={ClipboardCheck} color={attColor} bg={attPct >= 80 ? "#f0fdf4" : attPct >= 60 ? "#fffbeb" : "#fef2f2"} />
-
-        <StatCard title="Fee Collected"
-          value={`₹${(d.fees?.collectedToday || 0).toLocaleString()}`}
-          sub={`₹${(d.fees?.collectedThisMonth || 0).toLocaleString()} this month`}
-          icon={CreditCard} color="#f59e0b" bg="#fffbeb" trend={12} />
-
-        <StatCard title="Pending Fees"
-          value={`₹${(d.fees?.totalPending || 0).toLocaleString()}`}
-          sub="Total outstanding amount"
-          icon={AlertCircle} color="#ef4444" bg="#fef2f2" />
+      {/* Primary KPIs */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"16px" }}>
+        <Card label="Total Students"     value={d.students?.total || 0}
+          sub={`${d.students?.active||0} active · ${d.students?.newThisMonth||0} new this month`}
+          emoji="👥" accent="#1a56db" light="#eff6ff" />
+        <Card label="Today Attendance"   value={`${attPct}%`}
+          sub={`${d.attendance?.today?.present||0} present / ${d.attendance?.today?.total||0} total`}
+          emoji="📋" accent="#10b981" light="#f0fdf4" />
+        <Card label="Fee Collected Today" value={`₹${(d.fees?.collectedToday||0).toLocaleString()}`}
+          sub={`₹${(d.fees?.collectedThisMonth||0).toLocaleString()} this month`}
+          emoji="💰" accent="#f59e0b" light="#fffbeb" />
+        <Card label="Pending Fees"       value={`₹${(d.fees?.totalPending||0).toLocaleString()}`}
+          sub="Total outstanding"
+          emoji="⚠️" accent="#ef4444" light="#fef2f2" />
       </div>
 
-      {/* Secondary Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard title="Active Batches"   value={d.batches?.total || 0}        icon={BookOpen}       color="#8b5cf6" bg="#f5f3ff" />
-        <StatCard title="Enquiries (Week)" value={d.enquiries?.thisWeek || 0}   icon={MessageSquare}  color="#06b6d4" bg="#ecfeff" />
-        <StatCard title="Expenses (Month)" value={`₹${(d.expenses?.thisMonth || 0).toLocaleString()}`} icon={TrendingDown} color="#f43f5e" bg="#fff1f2" />
+      {/* Secondary KPIs */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"16px" }}>
+        <Card label="Active Batches"    value={d.batches?.total||0}             emoji="📚" light="#f5f3ff" />
+        <Card label="Enquiries (Week)"  value={d.enquiries?.thisWeek||0}        emoji="💬" light="#ecfeff" />
+        <Card label="Expenses (Month)"  value={`₹${(d.expenses?.thisMonth||0).toLocaleString()}`} emoji="📉" light="#fff1f2" />
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-3 gap-5">
-        {/* Revenue Chart */}
-        <div className="col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h2 className="font-bold text-gray-900">Revenue vs Expenses</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Last 6 months overview</p>
-            </div>
-            <div className="flex items-center gap-4 text-xs">
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-blue-500 inline-block" />Revenue</span>
-              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-400 inline-block" />Expense</span>
-            </div>
+      {/* Charts */}
+      <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:"20px" }}>
+
+        {/* Bar Chart */}
+        <div style={{ background:"#fff", borderRadius:"16px", padding:"24px", border:"1px solid #f1f5f9", boxShadow:"0 1px 4px rgba(0,0,0,0.05)" }}>
+          <div style={{ marginBottom:"20px" }}>
+            <h3 style={{ fontSize:"15px", fontWeight:700, color:"#0f172a" }}>Revenue vs Expenses</h3>
+            <p style={{ fontSize:"12px", color:"#94a3b8", marginTop:"3px" }}>Last 6 months</p>
           </div>
           {chart?.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={chart} barGap={4}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill:"#9ca3af" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill:"#9ca3af" }} axisLine={false} tickLine={false} tickFormatter={v => `₹${(v/1000).toFixed(0)}k`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="revenue" fill="#3b82f6" radius={[6,6,0,0]} name="Revenue" />
-                <Bar dataKey="expense" fill="#f87171" radius={[6,6,0,0]} name="Expense" />
+            <ResponsiveContainer width="100%" height={210}>
+              <BarChart data={chart} barCategoryGap="35%">
+                <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize:11, fill:"#94a3b8" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize:11, fill:"#94a3b8" }} axisLine={false} tickLine={false} tickFormatter={v=>`₹${(v/1000).toFixed(0)}k`} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill:"#f8fafc" }} />
+                <Bar dataKey="revenue" name="Revenue" fill="#1a56db" radius={[6,6,0,0]} />
+                <Bar dataKey="expense" name="Expense" fill="#f87171" radius={[6,6,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-52 flex items-center justify-center">
-              <p className="text-gray-300 text-sm">No data yet — collect fees to see revenue chart</p>
+            <div style={{ height:"210px", display:"flex", alignItems:"center", justifyContent:"center", color:"#cbd5e1", fontSize:"14px" }}>
+              📊 No data yet — add fees to see chart
             </div>
           )}
         </div>
 
-        {/* Quick Stats Panel */}
-        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-5">
-          <div>
-            <h2 className="font-bold text-gray-900">Quick Summary</h2>
-            <p className="text-xs text-gray-400 mt-0.5">This month at a glance</p>
-          </div>
+        {/* Summary panel */}
+        <div style={{ background:"#fff", borderRadius:"16px", padding:"24px", border:"1px solid #f1f5f9", boxShadow:"0 1px 4px rgba(0,0,0,0.05)", display:"flex", flexDirection:"column", gap:"0" }}>
+          <h3 style={{ fontSize:"15px", fontWeight:700, color:"#0f172a", marginBottom:"20px" }}>This Month</h3>
 
           {[
-            { label:"Net Profit",    value: `₹${((d.fees?.collectedThisMonth||0) - (d.expenses?.thisMonth||0)).toLocaleString()}`, color:"text-green-600" },
-            { label:"Total Revenue", value: `₹${(d.fees?.collectedThisMonth||0).toLocaleString()}`, color:"text-blue-600" },
-            { label:"Total Expense", value: `₹${(d.expenses?.thisMonth||0).toLocaleString()}`, color:"text-red-500" },
+            { label:"Revenue",  value:`₹${(d.fees?.collectedThisMonth||0).toLocaleString()}`,  color:"#1a56db" },
+            { label:"Expenses", value:`₹${(d.expenses?.thisMonth||0).toLocaleString()}`,        color:"#ef4444" },
+            { label:"Profit",   value:`₹${profit.toLocaleString()}`,                            color: profit>=0?"#10b981":"#ef4444" },
           ].map(({ label, value, color }) => (
-            <div key={label} className="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
-              <p className="text-sm text-gray-500">{label}</p>
-              <p className={`font-bold text-sm ${color}`}>{value}</p>
+            <div key={label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 0", borderBottom:"1px solid #f8fafc" }}>
+              <p style={{ fontSize:"13px", color:"#64748b" }}>{label}</p>
+              <p style={{ fontSize:"15px", fontWeight:700, color }}>{value}</p>
             </div>
           ))}
 
-          <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-4 text-white">
-            <p className="text-xs text-blue-200 mb-1">Attendance Rate</p>
-            <p className="text-3xl font-bold">{attPct}%</p>
-            <div className="w-full bg-white/20 rounded-full h-1.5 mt-2">
-              <div className="bg-white rounded-full h-1.5 transition-all" style={{ width: `${attPct}%` }} />
+          {/* Attendance meter */}
+          <div style={{ marginTop:"20px", background: attPct>=80?"#f0fdf4":attPct>=60?"#fffbeb":"#fef2f2", borderRadius:"12px", padding:"16px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:"8px" }}>
+              <p style={{ fontSize:"12px", fontWeight:600, color:"#374151" }}>Attendance Rate</p>
+              <p style={{ fontSize:"14px", fontWeight:800, color: attPct>=80?"#10b981":attPct>=60?"#f59e0b":"#ef4444" }}>{attPct}%</p>
             </div>
-            <p className="text-xs text-blue-200 mt-2">
-              {attPct >= 80 ? "✅ Great attendance!" : attPct >= 60 ? "⚠️ Needs improvement" : "❌ Critical — send alerts"}
+            <div style={{ background:"rgba(0,0,0,0.08)", borderRadius:"99px", height:"6px" }}>
+              <div style={{ width:`${attPct}%`, height:"6px", borderRadius:"99px", background: attPct>=80?"#10b981":attPct>=60?"#f59e0b":"#ef4444", transition:"width 0.6s ease" }} />
+            </div>
+            <p style={{ fontSize:"11px", color:"#64748b", marginTop:"8px" }}>
+              {attPct>=80 ? "✅ Excellent!" : attPct>=60 ? "⚠️ Needs attention" : "❌ Send alerts now"}
             </p>
           </div>
         </div>
