@@ -13,13 +13,17 @@ export default function Students() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["students", status],
-    queryFn: () => api.get(`/students?status=${status}&limit=50`).then(r => r.data.data),
+    queryFn: () => api.get(`/students?status=${status}&limit=100`).then(r => r.data.data),
+  });
+
+  const { data: searchResults, isLoading: searching } = useQuery({
+    queryKey: ["students-search", search],
+    queryFn: () => api.get(`/students/search?q=${search}`).then(r => r.data.data),
+    enabled: search.length >= 2,
   });
 
   const students = data?.students || [];
-  const filtered = search
-    ? students.filter(s => s.name.toLowerCase().includes(search.toLowerCase()) || s.phone?.includes(search))
-    : students;
+  const filtered = search.length >= 2 ? (searchResults || []) : students;
 
   return (
     <div className="space-y-5">
