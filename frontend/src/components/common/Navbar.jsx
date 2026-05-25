@@ -3,26 +3,36 @@ import { useAuthStore } from "../../store/authStore";
 
 export default function Navbar({ onToggleSidebar }) {
   const { user, logout } = useAuthStore();
+  const color = user?.branding?.primaryColor || "#1a56db";
 
   return (
-    <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4">
-      <button onClick={onToggleSidebar} className="p-1.5 rounded-lg hover:bg-gray-100">
-        <Menu size={20} className="text-gray-600" />
+    <header style={{
+      height: "56px", background: "#fff",
+      borderBottom: "1px solid #f1f5f9",
+      display: "flex", alignItems: "center",
+      justifyContent: "space-between",
+      padding: "0 16px", flexShrink: 0,
+      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+    }}>
+      <button onClick={onToggleSidebar}
+        style={{ padding:"8px", borderRadius:"10px", background:"none", border:"none", cursor:"pointer", display:"flex" }}>
+        <Menu size={22} color="#64748b" />
       </button>
 
-      <div className="flex items-center gap-3">
-        <button className="p-1.5 rounded-lg hover:bg-gray-100 relative">
-          <Bell size={20} className="text-gray-600" />
+      <div style={{ display:"flex", alignItems:"center", gap:"4px" }}>
+        <span style={{ fontSize:"13px", fontWeight:700, color:"#0f172a" }}>
+          {user?.branding?.instituteName || "EduManage"}
+        </span>
+      </div>
+
+      <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+        <button style={{ padding:"6px", borderRadius:"10px", background:"none", border:"none", cursor:"pointer", display:"flex" }}>
+          <Bell size={20} color="#64748b" />
         </button>
-        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-bold">
-          {user?.name?.[0]?.toUpperCase()}
-        </div>
         <button
           onClick={logout}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-500 transition-colors"
-        >
-          <LogOut size={16} />
-          Logout
+          style={{ padding:"6px", borderRadius:"10px", background:"#fef2f2", border:"none", cursor:"pointer", display:"flex" }}>
+          <LogOut size={18} color="#ef4444" />
         </button>
       </div>
     </header>
