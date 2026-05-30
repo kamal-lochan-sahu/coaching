@@ -1,0 +1,5 @@
+
+# QA / temporary test artifacts
+.playwright-mcp/
+qa-reports/
+qa-tests/

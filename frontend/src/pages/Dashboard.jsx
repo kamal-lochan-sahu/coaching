@@ -5,7 +5,7 @@ import Loader from "../components/ui/Loader";
 import { useAuthStore } from "../store/authStore";
 import { useState, useEffect } from "react";
 
-const Card = ({ label, value, sub, emoji, color="#1a56db", light="#eff6ff" }) => (
+const Card = ({ label, value, sub, emoji, light="#eff6ff" }) => (
   <div style={{ background:"#fff", borderRadius:"16px", padding:"18px", border:"1px solid #f1f5f9", boxShadow:"0 1px 4px rgba(0,0,0,0.05)" }}>
     <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:"10px" }}>
       <p style={{ fontSize:"11px", fontWeight:600, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.5px" }}>{label}</p>

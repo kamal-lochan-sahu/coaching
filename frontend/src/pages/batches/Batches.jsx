@@ -90,9 +90,16 @@ export default function Batches() {
                   <p style={{fontWeight:700,color:"#0f172a",fontSize:"15px"}}>{b.name}</p>
                   <p style={{fontSize:"12px",color:"#94a3b8",marginTop:"2px"}}>{b.timing?.days?.join(", ")||"—"} · {b.timing?.startTime||""}{b.timing?.startTime?" - ":""}{b.timing?.endTime||""}</p>
                 </div>
-                <span style={{padding:"3px 10px",borderRadius:"99px",fontSize:"11px",fontWeight:600,background:b.isActive?"#f0fdf4":"#fef2f2",color:b.isActive?"#16a34a":"#dc2626",flexShrink:0,marginLeft:"8px"}}>
-                  {b.isActive?"Active":"Inactive"}
-                </span>
+                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"4px"}}>
+                  <span style={{padding:"3px 10px",borderRadius:"99px",fontSize:"11px",fontWeight:600,background:b.isActive?"#f0fdf4":"#fef2f2",color:b.isActive?"#16a34a":"#dc2626",flexShrink:0}}>
+                    {b.isActive?"Active":"Inactive"}
+                  </span>
+                  {(b.enrolled||0) > (b.capacity||0) && (
+                    <span style={{padding:"3px 10px",borderRadius:"99px",fontSize:"10px",fontWeight:700,background:"#fee2e2",color:"#dc2626",border:"1px solid #fecaca"}}>
+                      ⚠️ Over capacity
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div style={{display:"flex",flexDirection:"column",gap:"6px",fontSize:"12px",color:"#64748b",marginBottom:"14px"}}>
@@ -103,13 +110,18 @@ export default function Batches() {
                   <span>Monthly Fee</span><span style={{fontWeight:700,color:"#1a56db"}}>₹{b.feeStructure?.amount?.toLocaleString()}</span>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between"}}>
-                  <span>Capacity</span><span style={{fontWeight:600,color:"#0f172a"}}>{b.enrolled}/{b.capacity} enrolled</span>
+                  <span>Capacity</span><span style={{fontWeight:600,color: (b.enrolled||0) > (b.capacity||0) ? "#dc2626" : "#0f172a"}}>{b.enrolled}/{b.capacity} enrolled</span>
                 </div>
               </div>
 
               {/* Capacity bar */}
               <div style={{background:"#f1f5f9",borderRadius:"99px",height:"6px",marginBottom:"14px"}}>
-                <div style={{width:`${Math.min(((b.enrolled||0)/b.capacity)*100,100)}%`,height:"6px",background:"#1a56db",borderRadius:"99px"}} />
+                <div style={{
+                  width:`${Math.min(((b.enrolled||0)/(b.capacity||1))*100,100)}%`,
+                  height:"6px",
+                  background: (b.enrolled||0) > (b.capacity||0) ? "#dc2626" : "#1a56db",
+                  borderRadius:"99px"
+                }} />
               </div>
 
               <div style={{display:"flex",gap:"8px"}}>

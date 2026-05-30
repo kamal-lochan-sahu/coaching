@@ -89,7 +89,7 @@ export default function Settings() {
         <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"28px"}}>
           <h3 style={{fontWeight:700,color:"#0f172a",marginBottom:"20px"}}>Institute Information</h3>
           <div style={{display:"flex",flexDirection:"column",gap:"16px"}}>
-            {[["Institute Name","instituteName","text","ABC Coaching Center"],["Address","address","text","MG Road, Delhi"],["Phone","phone","tel","011-1234567"],["Email","email","email","info@abc.com"],["Website","website","url","www.abc.com"]].map(([label,key,type,ph])=>(
+            {[["Institute Name","instituteName","text","e.g. EduManage"],["Address","address","text","e.g. 123 Main St, City"],["Phone","phone","tel","e.g. 9876543210"],["Email","email","email","e.g. info@edumanage.com"],["Website","website","url","e.g. www.edumanage.com"]].map(([label,key,type,ph])=>(
               <div key={key}>
                 <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>{label.toUpperCase()}</label>
                 <input type={type} value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value})} placeholder={ph}
@@ -239,7 +239,7 @@ export default function Settings() {
           <div style={{background:"#fff",borderRadius:"20px",padding:"32px",width:"100%",maxWidth:"460px",boxShadow:"0 20px 60px rgba(0,0,0,0.15)"}}>
             <h2 style={{fontSize:"18px",fontWeight:800,color:"#0f172a",marginBottom:"24px"}}>Add New Branch</h2>
             <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
-              {[["Branch Name *","name","text","Main Branch / Branch 2"],["Address","address","text","MG Road, Delhi"],["Phone","phone","tel","011-1234567"],["Email","email","email","branch@abc.com"]].map(([label,key,type,ph])=>(
+              {[["Branch Name *","name","text","e.g. North Campus"],["Address","address","text","e.g. 123 Main St, City"],["Phone","phone","tel","e.g. 9876543210"],["Email","email","email","e.g. branch@edumanage.com"]].map(([label,key,type,ph])=>(
                 <div key={key}>
                   <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>{label}</label>
                   <input type={type} value={branchForm[key]} onChange={e=>setBranchForm({...branchForm,[key]:e.target.value})} placeholder={ph}

@@ -100,8 +100,17 @@ export default function AddStudent() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Batch</label>
             <select {...f("batchId")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
               <option value="">Select Batch</option>
-              {batches?.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+              {batches?.map(b => (
+                <option key={b._id} value={b._id}>
+                  {b.name} ({b.enrolled}/{b.capacity})
+                </option>
+              ))}
             </select>
+            {form.batchId && batches?.find(b => b._id === form.batchId)?.enrolled >= batches?.find(b => b._id === form.batchId)?.capacity && (
+              <p className="text-xs text-red-500 mt-1 font-medium flex items-center gap-1">
+                ⚠️ Selected batch is at or over capacity
+              </p>
+            )}
           </div>
         </div>
 

@@ -3,7 +3,6 @@ import { useAuthStore } from "../../store/authStore";
 
 export default function Navbar({ onToggleSidebar }) {
   const { user, logout } = useAuthStore();
-  const color = user?.branding?.primaryColor || "#1a56db";
 
   return (
     <header style={{

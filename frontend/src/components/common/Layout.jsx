@@ -21,8 +21,8 @@ export default function Layout() {
   }, []);
 
   useEffect(() => {
-    if (isMobile) setSidebarOpen(false);
-  }, [location.pathname]);
+    if (isMobile && sidebarOpen) setSidebarOpen(false);
+  }, [location.pathname, isMobile, sidebarOpen]);
 
   return (
     <div style={{ display:"flex", height:"100dvh", background:"#f8faff", overflow:"hidden", position:"relative" }}>
@@ -43,14 +43,15 @@ export default function Layout() {
       {/* Sidebar — higher z-index than overlay, pointer events always on */}
       <div style={{
         position: isMobile ? "fixed" : "relative",
-        left: isMobile ? (sidebarOpen ? "0px" : "-260px") : "0px",
+        left: isMobile ? (sidebarOpen ? "0px" : "-280px") : "0px",
         top: 0, bottom: 0,
         zIndex: 50,
-        transition: "left 0.25s ease",
+        transition: "left 0.25s ease, visibility 0.25s",
         flexShrink: 0,
-        pointerEvents: "auto",
+        pointerEvents: isMobile && !sidebarOpen ? "none" : "auto",
+        visibility: isMobile && !sidebarOpen ? "hidden" : "visible",
       }}>
-        <Sidebar open={true} onClose={() => setSidebarOpen(false)} isMobile={isMobile} />
+        <Sidebar onClose={() => setSidebarOpen(false)} isMobile={isMobile} />
       </div>
 
       {/* Main content */}
