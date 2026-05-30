@@ -1,0 +1,173 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - img [ref=e9]
+          - generic [ref=e12]:
+            - paragraph [ref=e13]: Kamal Coaching
+            - paragraph [ref=e14]: Management System
+        - button [ref=e15] [cursor=pointer]:
+          - img [ref=e16]
+      - navigation [ref=e19]:
+        - link "Dashboard" [ref=e20] [cursor=pointer]:
+          - /url: /
+          - img [ref=e21]
+          - text: Dashboard
+        - link "Students" [ref=e26] [cursor=pointer]:
+          - /url: /students
+          - img [ref=e27]
+          - text: Students
+        - link "Batches" [ref=e32] [cursor=pointer]:
+          - /url: /batches
+          - img [ref=e33]
+          - text: Batches
+        - link "Attendance" [ref=e35] [cursor=pointer]:
+          - /url: /attendance
+          - img [ref=e36]
+          - text: Attendance
+        - link "Fees" [ref=e40] [cursor=pointer]:
+          - /url: /fees
+          - img [ref=e41]
+          - text: Fees
+        - link "Tests & Results" [ref=e43] [cursor=pointer]:
+          - /url: /tests
+          - img [ref=e44]
+          - text: Tests & Results
+        - link "Timetable" [ref=e47] [cursor=pointer]:
+          - /url: /timetable
+          - img [ref=e48]
+          - text: Timetable
+        - link "Staff" [ref=e50] [cursor=pointer]:
+          - /url: /staff
+          - img [ref=e51]
+          - text: Staff
+        - link "Enquiries" [ref=e55] [cursor=pointer]:
+          - /url: /enquiries
+          - img [ref=e56]
+          - text: Enquiries
+        - link "Expenses" [ref=e58] [cursor=pointer]:
+          - /url: /expenses
+          - img [ref=e59]
+          - text: Expenses
+        - link "Notifications" [ref=e62] [cursor=pointer]:
+          - /url: /notifications
+          - img [ref=e63]
+          - text: Notifications
+        - link "Analytics" [ref=e66] [cursor=pointer]:
+          - /url: /analytics
+          - img [ref=e67]
+          - text: Analytics
+        - link "Settings" [ref=e69] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e70]
+          - text: Settings
+      - generic [ref=e74]:
+        - generic [ref=e75]: K
+        - generic [ref=e76]:
+          - paragraph [ref=e77]: Kamal
+          - paragraph [ref=e78]: owner
+    - generic [ref=e79]:
+      - banner [ref=e80]:
+        - button [ref=e81] [cursor=pointer]:
+          - img [ref=e82]
+        - generic [ref=e84]: Kamal Coaching
+        - generic [ref=e85]:
+          - button [ref=e86] [cursor=pointer]:
+            - img [ref=e87]
+          - button [ref=e90] [cursor=pointer]:
+            - img [ref=e91]
+      - main [ref=e94]:
+        - generic [ref=e127]:
+          - generic [ref=e129]:
+            - paragraph [ref=e130]: Good morning 👋
+            - heading "Kamal" [level=1] [ref=e131]
+            - paragraph [ref=e132]: Sunday, 31 May
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - paragraph [ref=e136]: Total Students
+                - generic [ref=e137]: 👥
+              - paragraph [ref=e138]: "90"
+              - paragraph [ref=e139]: 90 active
+            - generic [ref=e140]:
+              - generic [ref=e141]:
+                - paragraph [ref=e142]: Today Attendance
+                - generic [ref=e143]: 📋
+              - paragraph [ref=e144]: 0%
+              - paragraph [ref=e145]: 0/0
+            - generic [ref=e146]:
+              - generic [ref=e147]:
+                - paragraph [ref=e148]: Fee Collected
+                - generic [ref=e149]: 💰
+              - paragraph [ref=e150]: ₹0
+              - paragraph [ref=e151]: ₹2,000 this month
+            - generic [ref=e152]:
+              - generic [ref=e153]:
+                - paragraph [ref=e154]: Pending Fees
+                - generic [ref=e155]: ⚠️
+              - paragraph [ref=e156]: ₹44,900
+              - paragraph [ref=e157]: Outstanding
+          - generic [ref=e158]:
+            - generic [ref=e159]:
+              - generic [ref=e160]:
+                - paragraph [ref=e161]: Batches
+                - generic [ref=e162]: 📚
+              - paragraph [ref=e163]: "4"
+            - generic [ref=e164]:
+              - generic [ref=e165]:
+                - paragraph [ref=e166]: Enquiries
+                - generic [ref=e167]: 💬
+              - paragraph [ref=e168]: "0"
+            - generic [ref=e169]:
+              - generic [ref=e170]:
+                - paragraph [ref=e171]: Expenses
+                - generic [ref=e172]: 📉
+              - paragraph [ref=e173]: ₹32,500
+          - generic [ref=e174]:
+            - generic [ref=e175]:
+              - generic [ref=e176]:
+                - heading "Revenue vs Expenses" [level=3] [ref=e177]
+                - paragraph [ref=e178]: Last 6 months
+              - generic [ref=e179]:
+                - paragraph [ref=e180]: Net Profit
+                - paragraph [ref=e181]: ₹-30,500
+            - application [ref=e184]:
+              - generic [ref=e207]:
+                - generic [ref=e208]:
+                  - generic [ref=e210]: 2025-12
+                  - generic [ref=e212]: 2026-02
+                  - generic [ref=e214]: 2026-04
+                - generic [ref=e215]:
+                  - generic [ref=e217]: ₹0k
+                  - generic [ref=e219]: ₹25k
+                  - generic [ref=e221]: ₹50k
+                  - generic [ref=e223]: ₹75k
+                  - generic [ref=e225]: ₹100k
+          - generic [ref=e226]:
+            - generic [ref=e227]:
+              - paragraph [ref=e228]: 📋 Today Attendance Rate
+              - paragraph [ref=e229]: 0%
+            - paragraph [ref=e231]: ❌ Critical — send WhatsApp alerts now
+    - navigation [ref=e98]:
+      - link "Home" [ref=e99] [cursor=pointer]:
+        - /url: /
+        - img [ref=e100]
+        - generic [ref=e105]: Home
+      - link "Students" [ref=e106] [cursor=pointer]:
+        - /url: /students
+        - img [ref=e107]
+        - generic [ref=e112]: Students
+      - link "Attendance" [ref=e113] [cursor=pointer]:
+        - /url: /attendance
+        - img [ref=e114]
+        - generic [ref=e118]: Attendance
+      - link "Fees" [ref=e119] [cursor=pointer]:
+        - /url: /fees
+        - img [ref=e120]
+        - generic [ref=e122]: Fees
+      - link "Reports" [ref=e123] [cursor=pointer]:
+        - /url: /analytics
+        - img [ref=e124]
+        - generic [ref=e126]: Reports
+  - generic [ref=e232]: ₹0k

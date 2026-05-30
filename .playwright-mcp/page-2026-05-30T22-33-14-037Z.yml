@@ -1,0 +1,192 @@
+- generic [ref=e3]:
+  - complementary [ref=e5]:
+    - generic [ref=e7]:
+      - img [ref=e9]
+      - generic [ref=e12]:
+        - paragraph [ref=e13]: Kamal Coaching
+        - paragraph [ref=e14]: Management System
+    - navigation [ref=e15]:
+      - link "Dashboard" [ref=e16] [cursor=pointer]:
+        - /url: /
+        - img [ref=e17]
+        - text: Dashboard
+      - link "Students" [ref=e22] [cursor=pointer]:
+        - /url: /students
+        - img [ref=e23]
+        - text: Students
+      - link "Batches" [ref=e28] [cursor=pointer]:
+        - /url: /batches
+        - img [ref=e29]
+        - text: Batches
+      - link "Attendance" [ref=e31] [cursor=pointer]:
+        - /url: /attendance
+        - img [ref=e32]
+        - text: Attendance
+      - link "Fees" [ref=e36] [cursor=pointer]:
+        - /url: /fees
+        - img [ref=e37]
+        - text: Fees
+      - link "Tests & Results" [ref=e39] [cursor=pointer]:
+        - /url: /tests
+        - img [ref=e40]
+        - text: Tests & Results
+      - link "Timetable" [ref=e43] [cursor=pointer]:
+        - /url: /timetable
+        - img [ref=e44]
+        - text: Timetable
+      - link "Staff" [ref=e46] [cursor=pointer]:
+        - /url: /staff
+        - img [ref=e47]
+        - text: Staff
+      - link "Enquiries" [ref=e51] [cursor=pointer]:
+        - /url: /enquiries
+        - img [ref=e52]
+        - text: Enquiries
+      - link "Expenses" [ref=e54] [cursor=pointer]:
+        - /url: /expenses
+        - img [ref=e55]
+        - text: Expenses
+      - link "Notifications" [ref=e58] [cursor=pointer]:
+        - /url: /notifications
+        - img [ref=e59]
+        - text: Notifications
+      - link "Analytics" [ref=e62] [cursor=pointer]:
+        - /url: /analytics
+        - img [ref=e63]
+        - text: Analytics
+      - link "Settings" [ref=e65] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e66]
+        - text: Settings
+    - generic [ref=e70]:
+      - generic [ref=e71]: K
+      - generic [ref=e72]:
+        - paragraph [ref=e73]: Kamal
+        - paragraph [ref=e74]: owner
+  - generic [ref=e75]:
+    - banner [ref=e76]:
+      - button [ref=e77] [cursor=pointer]:
+        - img [ref=e78]
+      - generic [ref=e80]: Kamal Coaching
+      - generic [ref=e81]:
+        - button [ref=e82] [cursor=pointer]:
+          - img [ref=e83]
+        - button [ref=e86] [cursor=pointer]:
+          - img [ref=e87]
+    - main [ref=e90]:
+      - generic [ref=e91]:
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - heading "Batches" [level=1] [ref=e94]
+            - paragraph [ref=e95]: 3 active batches
+          - button "+ New Batch" [ref=e96] [cursor=pointer]
+        - generic [ref=e98]:
+          - generic [ref=e99]:
+            - generic [ref=e100]:
+              - generic [ref=e101]:
+                - paragraph [ref=e102]: Spoken English
+                - paragraph [ref=e103]: Tue, Thu, Sat · 11:00 - 12:00
+              - generic [ref=e104]: Active
+            - generic [ref=e105]:
+              - generic [ref=e106]:
+                - generic [ref=e107]: Subjects
+                - generic [ref=e108]: English, Communication
+              - generic [ref=e109]:
+                - generic [ref=e110]: Monthly Fee
+                - generic [ref=e111]: ₹1,500
+              - generic [ref=e112]:
+                - generic [ref=e113]: Capacity
+                - generic [ref=e114]: 48/15 enrolled
+            - generic [ref=e117]:
+              - button "✏️ Edit" [ref=e118] [cursor=pointer]
+              - button "🗑️ Delete" [ref=e119] [cursor=pointer]
+          - generic [ref=e120]:
+            - generic [ref=e121]:
+              - generic [ref=e122]:
+                - paragraph [ref=e123]: Class 12 - Evening
+                - paragraph [ref=e124]: Mon, Wed, Fri, Sat · 17:00 - 19:00
+              - generic [ref=e125]: Active
+            - generic [ref=e126]:
+              - generic [ref=e127]:
+                - generic [ref=e128]: Subjects
+                - generic [ref=e129]: Physics, Chemistry, Math
+              - generic [ref=e130]:
+                - generic [ref=e131]: Monthly Fee
+                - generic [ref=e132]: ₹2,500
+              - generic [ref=e133]:
+                - generic [ref=e134]: Capacity
+                - generic [ref=e135]: 51/20 enrolled
+            - generic [ref=e138]:
+              - button "✏️ Edit" [ref=e139] [cursor=pointer]
+              - button "🗑️ Delete" [ref=e140] [cursor=pointer]
+          - generic [ref=e141]:
+            - generic [ref=e142]:
+              - generic [ref=e143]:
+                - paragraph [ref=e144]: Class 10 - Morning
+                - paragraph [ref=e145]: Mon, Tue, Wed, Thu, Fri · 08:00 - 10:00
+              - generic [ref=e146]: Active
+            - generic [ref=e147]:
+              - generic [ref=e148]:
+                - generic [ref=e149]: Subjects
+                - generic [ref=e150]: Math, Science, English
+              - generic [ref=e151]:
+                - generic [ref=e152]: Monthly Fee
+                - generic [ref=e153]: ₹2,000
+              - generic [ref=e154]:
+                - generic [ref=e155]: Capacity
+                - generic [ref=e156]: 54/30 enrolled
+            - generic [ref=e159]:
+              - button "✏️ Edit" [ref=e160] [cursor=pointer]
+              - button "🗑️ Delete" [ref=e161] [cursor=pointer]
+        - generic [ref=e163]:
+          - heading "Create New Batch" [level=2] [ref=e164]
+          - generic [ref=e165]:
+            - generic [ref=e166]:
+              - generic [ref=e167]: BATCH NAME *
+              - textbox "e.g. Class 10 - Morning" [active] [ref=e168]: QA Batch
+            - generic [ref=e169]:
+              - generic [ref=e170]: BRANCH *
+              - combobox [ref=e171]:
+                - option "Select Branch"
+                - option "Main Branch" [selected]
+            - generic [ref=e172]:
+              - generic [ref=e173]: SUBJECTS (comma separated)
+              - textbox "Math, Science, English" [ref=e174]
+            - generic [ref=e175]:
+              - generic [ref=e176]:
+                - generic [ref=e177]: START TIME
+                - textbox [ref=e178]
+              - generic [ref=e179]:
+                - generic [ref=e180]: END TIME
+                - textbox [ref=e181]
+            - generic [ref=e182]:
+              - generic [ref=e183]: DAYS
+              - generic [ref=e184]:
+                - button "Mon" [ref=e185] [cursor=pointer]
+                - button "Tue" [ref=e186] [cursor=pointer]
+                - button "Wed" [ref=e187] [cursor=pointer]
+                - button "Thu" [ref=e188] [cursor=pointer]
+                - button "Fri" [ref=e189] [cursor=pointer]
+                - button "Sat" [ref=e190] [cursor=pointer]
+                - button "Sun" [ref=e191] [cursor=pointer]
+            - generic [ref=e192]:
+              - generic [ref=e193]:
+                - generic [ref=e194]: MONTHLY FEE (₹) *
+                - spinbutton [ref=e195]
+              - generic [ref=e196]:
+                - generic [ref=e197]: CAPACITY
+                - spinbutton [ref=e198]: "30"
+            - generic [ref=e199]:
+              - generic [ref=e200]:
+                - generic [ref=e201]: FEE FREQUENCY
+                - combobox [ref=e202]:
+                  - option "Monthly" [selected]
+                  - option "Quarterly"
+                  - option "Yearly"
+                  - option "One Time"
+              - generic [ref=e203]:
+                - generic [ref=e204]: DUE DATE (Day of month)
+                - spinbutton [ref=e205]: "5"
+          - generic [ref=e206]:
+            - button "Cancel" [ref=e207] [cursor=pointer]
+            - button "Create Batch" [ref=e208] [cursor=pointer]

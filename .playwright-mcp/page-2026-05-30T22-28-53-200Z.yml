@@ -1,0 +1,158 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e55]:
+    - complementary [ref=e57]:
+      - generic [ref=e59]:
+        - img [ref=e61]
+        - generic [ref=e64]:
+          - paragraph [ref=e65]: Kamal Coaching
+          - paragraph [ref=e66]: Management System
+      - navigation [ref=e67]:
+        - link "Dashboard" [ref=e68] [cursor=pointer]:
+          - /url: /
+          - img [ref=e69]
+          - text: Dashboard
+        - link "Students" [ref=e74] [cursor=pointer]:
+          - /url: /students
+          - img [ref=e75]
+          - text: Students
+        - link "Batches" [ref=e80] [cursor=pointer]:
+          - /url: /batches
+          - img [ref=e81]
+          - text: Batches
+        - link "Attendance" [ref=e83] [cursor=pointer]:
+          - /url: /attendance
+          - img [ref=e84]
+          - text: Attendance
+        - link "Fees" [ref=e88] [cursor=pointer]:
+          - /url: /fees
+          - img [ref=e89]
+          - text: Fees
+        - link "Tests & Results" [ref=e91] [cursor=pointer]:
+          - /url: /tests
+          - img [ref=e92]
+          - text: Tests & Results
+        - link "Timetable" [ref=e95] [cursor=pointer]:
+          - /url: /timetable
+          - img [ref=e96]
+          - text: Timetable
+        - link "Staff" [ref=e98] [cursor=pointer]:
+          - /url: /staff
+          - img [ref=e99]
+          - text: Staff
+        - link "Enquiries" [ref=e103] [cursor=pointer]:
+          - /url: /enquiries
+          - img [ref=e104]
+          - text: Enquiries
+        - link "Expenses" [ref=e106] [cursor=pointer]:
+          - /url: /expenses
+          - img [ref=e107]
+          - text: Expenses
+        - link "Notifications" [ref=e110] [cursor=pointer]:
+          - /url: /notifications
+          - img [ref=e111]
+          - text: Notifications
+        - link "Analytics" [ref=e114] [cursor=pointer]:
+          - /url: /analytics
+          - img [ref=e115]
+          - text: Analytics
+        - link "Settings" [ref=e117] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e118]
+          - text: Settings
+      - generic [ref=e122]:
+        - generic [ref=e123]: K
+        - generic [ref=e124]:
+          - paragraph [ref=e125]: Kamal
+          - paragraph [ref=e126]: owner
+    - generic [ref=e127]:
+      - banner [ref=e128]:
+        - button [ref=e129] [cursor=pointer]:
+          - img [ref=e130]
+        - generic [ref=e132]: Kamal Coaching
+        - generic [ref=e133]:
+          - button [ref=e134] [cursor=pointer]:
+            - img [ref=e135]
+          - button [ref=e138] [cursor=pointer]:
+            - img [ref=e139]
+      - main [ref=e142]:
+        - generic [ref=e146]:
+          - generic [ref=e147]:
+            - generic [ref=e148]:
+              - paragraph [ref=e149]: Good morning 👋
+              - heading "Kamal" [level=1] [ref=e150]
+              - paragraph [ref=e151]: Sunday, 31 May
+            - generic [ref=e152]:
+              - generic [ref=e153]: 🎓
+              - generic [ref=e154]:
+                - paragraph [ref=e155]: Institute
+                - paragraph [ref=e156]: Kamal Coaching
+          - generic [ref=e157]:
+            - generic [ref=e158]:
+              - generic [ref=e159]:
+                - paragraph [ref=e160]: Total Students
+                - generic [ref=e161]: 👥
+              - paragraph [ref=e162]: "89"
+              - paragraph [ref=e163]: 89 active
+            - generic [ref=e164]:
+              - generic [ref=e165]:
+                - paragraph [ref=e166]: Today Attendance
+                - generic [ref=e167]: 📋
+              - paragraph [ref=e168]: 0%
+              - paragraph [ref=e169]: 0/0
+            - generic [ref=e170]:
+              - generic [ref=e171]:
+                - paragraph [ref=e172]: Fee Collected
+                - generic [ref=e173]: 💰
+              - paragraph [ref=e174]: ₹0
+              - paragraph [ref=e175]: ₹2,000 this month
+            - generic [ref=e176]:
+              - generic [ref=e177]:
+                - paragraph [ref=e178]: Pending Fees
+                - generic [ref=e179]: ⚠️
+              - paragraph [ref=e180]: ₹44,900
+              - paragraph [ref=e181]: Outstanding
+          - generic [ref=e182]:
+            - generic [ref=e183]:
+              - generic [ref=e184]:
+                - paragraph [ref=e185]: Batches
+                - generic [ref=e186]: 📚
+              - paragraph [ref=e187]: "3"
+            - generic [ref=e188]:
+              - generic [ref=e189]:
+                - paragraph [ref=e190]: Enquiries
+                - generic [ref=e191]: 💬
+              - paragraph [ref=e192]: "0"
+            - generic [ref=e193]:
+              - generic [ref=e194]:
+                - paragraph [ref=e195]: Expenses
+                - generic [ref=e196]: 📉
+              - paragraph [ref=e197]: ₹32,500
+          - generic [ref=e198]:
+            - generic [ref=e199]:
+              - generic [ref=e200]:
+                - heading "Revenue vs Expenses" [level=3] [ref=e201]
+                - paragraph [ref=e202]: Last 6 months
+              - generic [ref=e203]:
+                - paragraph [ref=e204]: Net Profit
+                - paragraph [ref=e205]: ₹-30,500
+            - application [ref=e208]:
+              - generic [ref=e212]:
+                - generic [ref=e213]:
+                  - generic [ref=e215]: 2025-11
+                  - generic [ref=e217]: 2025-12
+                  - generic [ref=e219]: 2026-01
+                  - generic [ref=e221]: 2026-02
+                  - generic [ref=e223]: 2026-03
+                  - generic [ref=e225]: 2026-04
+                - generic [ref=e226]:
+                  - generic [ref=e228]: ₹0k
+                  - generic [ref=e230]: ₹25k
+                  - generic [ref=e232]: ₹50k
+                  - generic [ref=e234]: ₹75k
+                  - generic [ref=e236]: ₹100k
+          - generic [ref=e237]:
+            - generic [ref=e238]:
+              - paragraph [ref=e239]: 📋 Today Attendance Rate
+              - paragraph [ref=e240]: 0%
+            - paragraph [ref=e242]: ❌ Critical — send WhatsApp alerts now
+  - generic [ref=e243]: ₹0k

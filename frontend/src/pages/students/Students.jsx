@@ -6,102 +6,111 @@ import api from "../../services/api";
 import Badge from "../../components/ui/Badge";
 import Loader from "../../components/ui/Loader";
 import EmptyState from "../../components/ui/EmptyState";
+import { useDebounce } from "../../hooks/useDebounce";
 
 export default function Students() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("active");
+  const debouncedSearch = useDebounce(search, 400);
 
   const { data, isLoading } = useQuery({
     queryKey: ["students", status],
-    queryFn: () => api.get(`/students?status=${status}&limit=100`).then(r => r.data.data),
+    queryFn:  () => api.get(`/students?status=${status}&limit=100`).then(r => r.data.data),
+    staleTime: 30000,
   });
 
-  const { data: searchResults, isLoading: searching } = useQuery({
-    queryKey: ["students-search", search],
-    queryFn: () => api.get(`/students/search?q=${search}`).then(r => r.data.data),
-    enabled: search.length >= 2,
+  const { data: searchResults=[], isFetching: searching } = useQuery({
+    queryKey: ["students-search", debouncedSearch],
+    queryFn:  () => api.get(`/students/search?q=${debouncedSearch}`).then(r => r.data.data),
+    enabled:  debouncedSearch.length >= 2,
+    staleTime: 10000,
   });
 
   const students = data?.students || [];
-  const filtered = search.length >= 2 ? (searchResults || []) : students;
+  const filtered = debouncedSearch.length >= 2 ? searchResults : students;
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
+    <div style={{display:"flex",flexDirection:"column",gap:"20px"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Students</h1>
-          <p className="text-sm text-gray-400">{data?.total || 0} total students</p>
+          <h1 style={{fontSize:"24px",fontWeight:800,color:"#0f172a"}}>Students</h1>
+          <p style={{fontSize:"13px",color:"#94a3b8",marginTop:"2px"}}>
+            {debouncedSearch.length >= 2 ? `${filtered.length} results for "${debouncedSearch}"` : `${data?.total || 0} total students`}
+          </p>
         </div>
         <Link to="/students/add"
-          className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+          style={{display:"flex",alignItems:"center",gap:"6px",padding:"10px 18px",background:"#1a56db",color:"#fff",borderRadius:"10px",textDecoration:"none",fontSize:"13px",fontWeight:600}}>
           <Plus size={16} /> Add Student
         </Link>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <div style={{display:"flex",gap:"12px",flexWrap:"wrap"}}>
+        <div style={{position:"relative",flex:1,minWidth:"200px",maxWidth:"380px"}}>
+          <Search size={16} style={{position:"absolute",left:"12px",top:"50%",transform:"translateY(-50%)",color:"#94a3b8"}} />
           <input
-            placeholder="Search name or phone..."
+            placeholder="Search name or phone... (min 2 chars)"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            style={{width:"100%",paddingLeft:"38px",paddingRight:"16px",paddingTop:"10px",paddingBottom:"10px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}}
           />
+          {searching && (
+            <div style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",width:"14px",height:"14px",border:"2px solid #e2e8f0",borderTopColor:"#1a56db",borderRadius:"50%",animation:"spin 0.7s linear infinite"}} />
+          )}
         </div>
-        <select
-          value={status}
-          onChange={e => setStatus(e.target.value)}
-          className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none"
-        >
+        <select value={status} onChange={e => setStatus(e.target.value)}
+          style={{padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
           <option value="passed">Passed</option>
+          <option value="dropped">Dropped</option>
         </select>
       </div>
 
       {/* Table */}
-      {isLoading ? <Loader /> : filtered.length === 0 ? (
-        <EmptyState icon={Users} title="No students found"
-          description="Add your first student to get started"
-          action={<Link to="/students/add" className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm">Add Student</Link>}
+      {isLoading && !search ? <Loader /> : filtered.length === 0 ? (
+        <EmptyState icon={Users}
+          title={search ? `No students found for "${search}"` : "No students yet"}
+          description={search ? "Try a different search term" : "Add your first student to get started"}
+          action={!search && <Link to="/students/add" style={{padding:"10px 20px",background:"#1a56db",color:"#fff",borderRadius:"10px",textDecoration:"none",fontSize:"13px",fontWeight:600}}>Add Student</Link>}
         />
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Student</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Phone</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Batch</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Status</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Joined</th>
+        <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.04)"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:"13px"}}>
+            <thead>
+              <tr style={{background:"#f8fafc",borderBottom:"1px solid #f1f5f9"}}>
+                {["Student","Phone","Batch","Status","Joined"].map(h => (
+                  <th key={h} style={{textAlign:"left",padding:"12px 16px",color:"#64748b",fontWeight:600,fontSize:"12px"}}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.map(s => (
-                <tr key={s._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3">
-                    <Link to={`/students/${s._id}`} className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+            <tbody>
+              {filtered.map((s, i) => (
+                <tr key={s._id} style={{borderTop:"1px solid #f8fafc",background:i%2===0?"#fff":"#fafafa",transition:"background 0.1s"}}
+                  onMouseEnter={e=>e.currentTarget.style.background="#f0f7ff"}
+                  onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"#fff":"#fafafa"}>
+                  <td style={{padding:"12px 16px"}}>
+                    <Link to={`/students/${s._id}`} style={{display:"flex",alignItems:"center",gap:"10px",textDecoration:"none"}}>
+                      <div style={{width:"36px",height:"36px",borderRadius:"50%",background:"#eff6ff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,color:"#1a56db",fontSize:"14px",flexShrink:0}}>
                         {s.name[0]}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900 hover:text-blue-600">{s.name}</p>
-                        <p className="text-xs text-gray-400">{s.admissionNumber}</p>
+                        <p style={{fontWeight:600,color:"#0f172a"}}>{s.name}</p>
+                        <p style={{fontSize:"11px",color:"#94a3b8"}}>{s.admissionNumber}</p>
                       </div>
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{s.phone || "—"}</td>
-                  <td className="px-4 py-3 text-gray-600">{s.currentBatch?.name || "—"}</td>
-                  <td className="px-4 py-3"><Badge status={s.status} /></td>
-                  <td className="px-4 py-3 text-gray-400">{new Date(s.admissionDate).toLocaleDateString("en-IN")}</td>
+                  <td style={{padding:"12px 16px",color:"#64748b"}}>{s.phone || "—"}</td>
+                  <td style={{padding:"12px 16px",color:"#64748b"}}>{s.currentBatch?.name || "—"}</td>
+                  <td style={{padding:"12px 16px"}}><Badge status={s.status} /></td>
+                  <td style={{padding:"12px 16px",color:"#94a3b8",fontSize:"12px"}}>{new Date(s.admissionDate).toLocaleDateString("en-IN")}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

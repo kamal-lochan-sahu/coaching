@@ -1,0 +1,26 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - generic [ref=e8]: 🎓
+    - heading "EduManage" [level=1] [ref=e9]
+    - paragraph [ref=e10]: Coaching Management System
+  - generic [ref=e11]:
+    - heading "Welcome back 👋" [level=2] [ref=e12]
+    - paragraph [ref=e13]: Sign in to your institute dashboard
+  - generic [ref=e14]:
+    - generic [ref=e15]:
+      - generic [ref=e16]: Email Address
+      - textbox "you@example.com" [ref=e17]
+    - generic [ref=e18]:
+      - generic [ref=e19]: Password
+      - generic [ref=e20]:
+        - textbox "Enter your password" [ref=e21]
+        - button [ref=e22] [cursor=pointer]:
+          - img [ref=e23]
+    - button "Sign In →" [ref=e26] [cursor=pointer]
+  - generic [ref=e27]:
+    - paragraph [ref=e28]: 🔑 Demo Credentials
+    - paragraph [ref=e29]: kamal@test.com · test1234
+  - paragraph [ref=e30]:
+    - text: No account?
+    - link "Create one free" [ref=e31] [cursor=pointer]:
+      - /url: /register

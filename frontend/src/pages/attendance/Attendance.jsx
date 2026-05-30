@@ -16,18 +16,20 @@ export default function Attendance() {
   const [records,   setRecords]   = useState({});
   const [submitted, setSubmitted] = useState(false);
 
-  const { data: batches=[] } = useQuery({
+  const { data: batches=[], isLoading: batchLoading } = useQuery({
     queryKey: ["batches"],
-    queryFn:  () => api.get("/batches").then(r => r.data.data),
+    queryFn:  () => api.get("/batches?isActive=true").then(r => r.data.data),
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
-  const { data: students=[], isLoading } = useQuery({
+  const { data: students=[], isLoading: studentsLoading } = useQuery({
     queryKey: ["batch-students", batchId],
     queryFn:  () => api.get(`/batches/${batchId}/students`).then(r => r.data.data),
     enabled:  !!batchId,
+    staleTime: 0,
   });
 
-  // Fix: useEffect instead of deprecated onSuccess
   useEffect(() => {
     if (students.length > 0) {
       const init = {};
@@ -39,7 +41,7 @@ export default function Attendance() {
 
   const mark = useMutation({
     mutationFn: (payload) => api.post("/attendance/mark", payload),
-    onSuccess: () => { toast.success("Attendance saved!"); setSubmitted(true); },
+    onSuccess: () => { toast.success("✅ Attendance saved!"); setSubmitted(true); },
     onError:   (e) => toast.error(e.response?.data?.message || "Failed"),
   });
 
@@ -74,12 +76,23 @@ export default function Attendance() {
       {/* Controls */}
       <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"20px",display:"flex",gap:"16px",alignItems:"flex-end",flexWrap:"wrap"}}>
         <div style={{flex:1,minWidth:"200px"}}>
-          <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>SELECT BATCH</label>
-          <select value={batchId} onChange={e => setBatchId(e.target.value)}
+          <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>
+            SELECT BATCH {batchLoading && <span style={{color:"#94a3b8"}}>Loading...</span>}
+          </label>
+          <select value={batchId} onChange={e => { setBatchId(e.target.value); setSubmitted(false); }}
             style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
-            <option value="">Choose batch...</option>
-            {batches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+            <option value="">
+              {batchLoading ? "Loading batches..." : batches.length === 0 ? "No batches found" : "Choose batch..."}
+            </option>
+            {batches.map(b => (
+              <option key={b._id} value={b._id}>
+                {b.name} ({b.enrolled || 0} students)
+              </option>
+            ))}
           </select>
+          {!batchLoading && batches.length === 0 && (
+            <p style={{fontSize:"11px",color:"#dc2626",marginTop:"4px"}}>⚠️ No active batches. Create a batch first.</p>
+          )}
         </div>
         <div>
           <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>DATE</label>
@@ -121,11 +134,13 @@ export default function Attendance() {
         <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"60px",textAlign:"center",color:"#94a3b8"}}>
           📋 Select a batch to mark attendance
         </div>
-      ) : isLoading ? (
-        <p style={{color:"#94a3b8",textAlign:"center",padding:"40px"}}>Loading students...</p>
+      ) : studentsLoading ? (
+        <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"40px",textAlign:"center",color:"#94a3b8"}}>
+          Loading students...
+        </div>
       ) : students.length === 0 ? (
         <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"60px",textAlign:"center",color:"#94a3b8"}}>
-          No students in this batch
+          No active students in this batch
         </div>
       ) : (
         <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",overflow:"hidden"}}>
@@ -139,7 +154,7 @@ export default function Attendance() {
             return (
               <div key={st._id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:i<students.length-1?"1px solid #f8fafc":"none",background:i%2===0?"#fff":"#fafafa"}}>
                 <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
-                  <div style={{width:"38px",height:"38px",borderRadius:"50%",background:cfg.bg,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,color:cfg.color,fontSize:"14px"}}>
+                  <div style={{width:"38px",height:"38px",borderRadius:"50%",background:cfg.bg,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,color:cfg.color,fontSize:"14px",flexShrink:0}}>
                     {st.name[0]}
                   </div>
                   <div>
@@ -147,10 +162,10 @@ export default function Attendance() {
                     <p style={{fontSize:"12px",color:"#94a3b8"}}>{st.phone || "—"}</p>
                   </div>
                 </div>
-                <div style={{display:"flex",gap:"8px"}}>
+                <div style={{display:"flex",gap:"6px",flexWrap:"wrap",justifyContent:"flex-end"}}>
                   {["present","absent","late"].map(s => (
                     <button key={s} onClick={() => setRecords({...records,[st._id]:s})}
-                      style={{padding:"7px 14px",borderRadius:"8px",border:"1.5px solid",fontSize:"12px",fontWeight:600,cursor:"pointer",
+                      style={{padding:"7px 12px",borderRadius:"8px",border:"1.5px solid",fontSize:"12px",fontWeight:600,cursor:"pointer",
                         borderColor:status===s?STATUS_CONFIG[s].color:"#e2e8f0",
                         background:status===s?STATUS_CONFIG[s].bg:"#fff",
                         color:status===s?STATUS_CONFIG[s].color:"#94a3b8"}}>
