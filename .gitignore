@@ -3,3 +3,11 @@
 .playwright-mcp/
 qa-reports/
 qa-tests/
+
+# Test screenshots & Playwright artifacts (root level only)
+/*.png
+/d[0-9]*.png
+/m[0-9]*.png
+/test*.png
+.playwright-mcp/
+frontend/dist/
