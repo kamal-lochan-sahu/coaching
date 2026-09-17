@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { getStaff, addStaff, getStaffMember, updateStaff, paySalary, getSalaryHistory } from "../controllers/staff.controller.js";
 import { protect, adminAndAbove, ownerOnly, allRoles } from "../middleware/auth.middleware.js";
+import { validate } from "../middleware/validate.middleware.js";
+import { addStaffSchema, updateStaffSchema, paySalarySchema } from "../validators/schemas.js";
 const router = Router();
 router.use(protect);
 router.get("/",    allRoles, getStaff);
-router.post("/",   ownerOnly, addStaff);
+router.post("/",   ownerOnly, validate(addStaffSchema), addStaff);
 router.get("/:id",             allRoles, getStaffMember);
-router.put("/:id",             adminAndAbove, updateStaff);
-router.post("/:id/salary",     ownerOnly, paySalary);
+router.put("/:id",             adminAndAbove, validate(updateStaffSchema), updateStaff);
+router.post("/:id/salary",     ownerOnly, validate(paySalarySchema), paySalary);
 router.get("/:id/salary-history", ownerOnly, getSalaryHistory);
 export default router;

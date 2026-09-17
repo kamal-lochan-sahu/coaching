@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { sendNotification, getNotificationHistory } from "../controllers/notification.controller.js";
 import { protect, adminAndAbove, allRoles } from "../middleware/auth.middleware.js";
+import { validate } from "../middleware/validate.middleware.js";
+import { sendNotificationSchema } from "../validators/schemas.js";
 const router = Router();
 router.use(protect);
-router.post("/send",  adminAndAbove, sendNotification);
+router.post("/send",  adminAndAbove, validate(sendNotificationSchema), sendNotification);
 router.get("/history",allRoles, getNotificationHistory);
 export default router;

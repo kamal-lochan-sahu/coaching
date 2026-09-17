@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { getBatchTimetable, createTimetable, updateTimetable } from "../controllers/timetable.controller.js";
 import { protect, adminAndAbove, allRoles } from "../middleware/auth.middleware.js";
+import { validate } from "../middleware/validate.middleware.js";
+import { createTimetableSchema, updateTimetableSchema } from "../validators/schemas.js";
 const router = Router();
 router.use(protect);
 router.get("/batch/:batchId", allRoles, getBatchTimetable);
-router.post("/",              adminAndAbove, createTimetable);
-router.put("/:id",            adminAndAbove, updateTimetable);
+router.post("/",              adminAndAbove, validate(createTimetableSchema), createTimetable);
+router.put("/:id",            adminAndAbove, validate(updateTimetableSchema), updateTimetable);
 export default router;

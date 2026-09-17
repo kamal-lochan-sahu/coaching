@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { getBatches, createBatch, getBatch, updateBatch, deleteBatch, getBatchStudents } from "../controllers/batch.controller.js";
 import { protect, adminAndAbove, allRoles } from "../middleware/auth.middleware.js";
+import { validate } from "../middleware/validate.middleware.js";
+import { createBatchSchema, updateBatchSchema } from "../validators/schemas.js";
 const router = Router();
 router.use(protect);
 router.get("/",    allRoles, getBatches);
-router.post("/",   adminAndAbove, createBatch);
+router.post("/",   adminAndAbove, validate(createBatchSchema), createBatch);
 router.get("/:id",          allRoles, getBatch);
-router.put("/:id",          adminAndAbove, updateBatch);
+router.put("/:id",          adminAndAbove, validate(updateBatchSchema), updateBatch);
 router.delete("/:id",       adminAndAbove, deleteBatch);
 router.get("/:id/students", allRoles, getBatchStudents);
 export default router;
