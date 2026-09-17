@@ -2,6 +2,7 @@ import { Fee } from "../models/Academic.js";
 import Student from "../models/Student.js";
 import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
 import { generateReceiptNumber } from "../utils/receiptNumber.utils.js";
+import { invalidateDashboardCache, invalidateRevenueCache } from "../config/redis.js";
 
 export const getFees = asyncHandler(async (req, res) => {
   const { branchId, month, status, page = 1, limit = 20 } = req.query;
@@ -73,6 +74,8 @@ export const collectFee = asyncHandler(async (req, res) => {
   }
 
   const populated = await fee.populate("studentId","name phone guardianPhone guardianName");
+  await invalidateDashboardCache(req.ownerId);
+  await invalidateRevenueCache(req.ownerId);
   return res.status(201).json(new ApiResponse(201, populated, "Fee collected successfully"));
 });
 
@@ -107,6 +110,7 @@ export const waiveFee = asyncHandler(async (req, res) => {
     { new: true }
   );
   if (!fee) throw new ApiError(404, "Fee record not found");
+  await invalidateDashboardCache(req.ownerId);
   return res.json(new ApiResponse(200, fee, "Fee waived"));
 });
 
@@ -153,5 +157,6 @@ export const generateFeeForBatch = asyncHandler(async (req, res) => {
     }));
 
   if (newFees.length) await Fee.insertMany(newFees);
+  await invalidateDashboardCache(req.ownerId);
   return res.json(new ApiResponse(200, null, `Fee generated for ${newFees.length} students (${existingIds.size} already existed)`));
 });

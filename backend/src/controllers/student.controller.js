@@ -2,6 +2,7 @@ import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
 import { Attendance, Fee, Result } from "../models/Academic.js";
 import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
+import { invalidateDashboardCache } from "../config/redis.js";
 
 export const getStudents = asyncHandler(async (req, res) => {
   const { branchId, batchId, status = "active", page = 1, limit = 20 } = req.query;
@@ -46,6 +47,7 @@ export const createStudent = asyncHandler(async (req, res) => {
   if (batchId) {
     await Batch.findByIdAndUpdate(batchId, { $inc: { enrolled: 1 } });
   }
+  await invalidateDashboardCache(req.ownerId);
   return res.status(201).json(new ApiResponse(201, student, "Student added successfully"));
 });
 
@@ -63,6 +65,7 @@ export const updateStudent = asyncHandler(async (req, res) => {
     { new: true, runValidators: true }
   );
   if (!student) throw new ApiError(404, "Student not found");
+  await invalidateDashboardCache(req.ownerId);
   return res.json(new ApiResponse(200, student, "Student updated"));
 });
 
@@ -72,6 +75,7 @@ export const deleteStudent = asyncHandler(async (req, res) => {
     { status: "inactive" }, { new: true }
   );
   if (!student) throw new ApiError(404, "Student not found");
+  await invalidateDashboardCache(req.ownerId);
   return res.json(new ApiResponse(200, null, "Student deactivated"));
 });
 

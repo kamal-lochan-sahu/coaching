@@ -61,4 +61,9 @@ export const cacheDeletePattern = async (pattern) => {
   } catch {}
 };
 
+// ✅ Cache invalidation helpers — call after any mutation that changes
+// the numbers shown on the dashboard or revenue chart.
+export const invalidateDashboardCache = (ownerId) => cacheDelete(`dashboard:${ownerId}`);
+export const invalidateRevenueCache   = (ownerId) => cacheDelete(`revenue:${ownerId}`);
+
 export { redisClient };

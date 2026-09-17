@@ -1,5 +1,6 @@
 import { Expense } from "../models/Management.js";
 import { ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
+import { invalidateDashboardCache, invalidateRevenueCache } from "../config/redis.js";
 
 export const getExpenses = asyncHandler(async (req, res) => {
   const { branchId, month, category } = req.query;
@@ -21,6 +22,8 @@ export const addExpense = asyncHandler(async (req, res) => {
     addedBy: req.user._id,
     ...req.body,
   });
+  await invalidateDashboardCache(req.ownerId);
+  await invalidateRevenueCache(req.ownerId);
   return res.status(201).json(new ApiResponse(201, expense, "Expense recorded"));
 });
 

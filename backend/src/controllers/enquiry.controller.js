@@ -1,6 +1,7 @@
 import { Enquiry } from "../models/Management.js";
 import Student from "../models/Student.js";
 import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
+import { invalidateDashboardCache } from "../config/redis.js";
 
 export const getEnquiries = asyncHandler(async (req, res) => {
   const { status, branchId, page = 1, limit = 20 } = req.query;
@@ -18,6 +19,7 @@ export const getEnquiries = asyncHandler(async (req, res) => {
 
 export const createEnquiry = asyncHandler(async (req, res) => {
   const enquiry = await Enquiry.create({ ownerId: req.ownerId, ...req.body });
+  await invalidateDashboardCache(req.ownerId);
   return res.status(201).json(new ApiResponse(201, enquiry, "Enquiry logged"));
 });
 
@@ -71,6 +73,7 @@ export const convertToStudent = asyncHandler(async (req, res) => {
   enquiry.convertedToStudentId = student._id;
   await enquiry.save();
 
+  await invalidateDashboardCache(req.ownerId);
   return res.json(new ApiResponse(200, { enquiry, student }, "Enquiry converted to student"));
 });
 

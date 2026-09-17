@@ -1,6 +1,7 @@
 import { Attendance } from "../models/Academic.js";
 import Student from "../models/Student.js";
 import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
+import { invalidateDashboardCache } from "../config/redis.js";
 
 export const markAttendance = asyncHandler(async (req, res) => {
   const { batchId, branchId, date, records } = req.body;
@@ -26,6 +27,7 @@ export const markAttendance = asyncHandler(async (req, res) => {
   }));
 
   await Attendance.bulkWrite(ops);
+  await invalidateDashboardCache(req.ownerId);
   return res.json(new ApiResponse(200, null, `Attendance marked for ${records.length} students`));
 });
 
