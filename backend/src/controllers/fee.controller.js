@@ -1,8 +1,10 @@
 import { Fee } from "../models/Academic.js";
 import Student from "../models/Student.js";
+import User from "../models/User.js";
 import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
 import { generateReceiptNumber } from "../utils/receiptNumber.utils.js";
 import { invalidateDashboardCache, invalidateRevenueCache } from "../config/redis.js";
+import { generateFeeReceiptPDF } from "../services/report.service.js";
 
 export const getFees = asyncHandler(async (req, res) => {
   const { branchId, month, status, page = 1, limit = 20 } = req.query;
@@ -159,4 +161,26 @@ export const generateFeeForBatch = asyncHandler(async (req, res) => {
   if (newFees.length) await Fee.insertMany(newFees);
   await invalidateDashboardCache(req.ownerId);
   return res.json(new ApiResponse(200, null, `Fee generated for ${newFees.length} students (${existingIds.size} already existed)`));
+});
+
+// GET /api/fees/:id/receipt — stream a PDF receipt for a paid fee
+export const downloadFeeReceipt = asyncHandler(async (req, res) => {
+  const fee = await Fee.findOne({ _id: req.params.id, ownerId: req.ownerId })
+    .populate("studentId", "name")
+    .populate("batchId", "name");
+  if (!fee) throw new ApiError(404, "Fee record not found");
+  if (fee.status !== "paid") throw new ApiError(400, "Receipt is only available for paid fees");
+
+  const owner = await User.findById(req.ownerId).select("branding");
+  const instituteName = owner?.branding?.instituteName || "EduManage";
+  const brandColor    = owner?.branding?.primaryColor  || "#3b82f6";
+
+  const pdfBuffer = await generateFeeReceiptPDF(fee, fee.studentId, fee.batchId, instituteName, brandColor);
+
+  res.set({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename="Receipt-${fee.receiptNumber}.pdf"`,
+    "Content-Length": pdfBuffer.length,
+  });
+  return res.send(pdfBuffer);
 });

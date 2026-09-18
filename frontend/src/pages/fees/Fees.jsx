@@ -14,6 +14,27 @@ export default function Fees() {
   const [showGenerate, setShowGenerate] = useState(false);
   const [genForm,   setGenForm]   = useState({ batchId:"", month:new Date().toISOString().slice(0,7), dueDate:"" });
   const [form, setForm] = useState({ amount:"", discount:"0", paymentMode:"cash", month:new Date().toISOString().slice(0,7), note:"" });
+  const [lastReceipt, setLastReceipt] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
+
+  const downloadReceipt = async (feeId, receiptNumber) => {
+    setDownloadingId(feeId);
+    try {
+      const res = await api.get(`/fees/${feeId}/receipt`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Receipt-${receiptNumber || feeId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to download receipt");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const { data:pending=[]  } = useQuery({ queryKey:["pending-fees"], queryFn:()=>api.get("/fees/pending").then(r=>r.data.data.fees) });
   const { data:feeReport   } = useQuery({ queryKey:["fee-report"],   queryFn:()=>api.get(`/fees/report?month=${new Date().toISOString().slice(0,7)}`).then(r=>r.data.data) });
@@ -38,6 +59,7 @@ export default function Fees() {
       toast.success(`✅ Receipt ${res.data.data.receiptNumber} generated!`);
       qc.invalidateQueries(["pending-fees"]);
       qc.invalidateQueries(["fee-report"]);
+      setLastReceipt(res.data.data);
       setFound(null); setSearch("");
       setForm({ amount:"",discount:"0",paymentMode:"cash",month:new Date().toISOString().slice(0,7),note:"" });
     },
@@ -114,6 +136,24 @@ export default function Fees() {
         ))}
       </div>
 
+      {lastReceipt&&(
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 20px",background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:"12px"}}>
+          <p style={{fontSize:"13px",color:"#15803d",fontWeight:600}}>
+            ✅ Receipt <strong>{lastReceipt.receiptNumber}</strong> for {lastReceipt.studentId?.name} is ready
+          </p>
+          <div style={{display:"flex",gap:"8px"}}>
+            <button onClick={()=>downloadReceipt(lastReceipt._id, lastReceipt.receiptNumber)} disabled={downloadingId===lastReceipt._id}
+              style={{padding:"7px 14px",background:"#16a34a",color:"#fff",border:"none",borderRadius:"8px",cursor:"pointer",fontSize:"12px",fontWeight:700}}>
+              {downloadingId===lastReceipt._id?"Downloading...":"⬇️ Download PDF"}
+            </button>
+            <button onClick={()=>setLastReceipt(null)}
+              style={{padding:"7px 10px",background:"transparent",color:"#15803d",border:"none",cursor:"pointer",fontSize:"12px"}}>
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Collect Tab */}
       {tab==="collect"&&(
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"20px"}}>
@@ -131,43 +171,39 @@ export default function Fees() {
             {found&&(
               <div style={{padding:"16px",background:"#f8fafc",borderRadius:"12px",border:"1px solid #e2e8f0"}}>
                 <div style={{display:"flex",alignItems:"center",gap:"12px",marginBottom:"10px"}}>
-                  <div style={{width:"44px",height:"44px",borderRadius:"50%",background:"#eff6ff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,color:"#1a56db",fontSize:"18px"}}>
-                    {found.name[0]}
+                  <div style={{width:"40px",height:"40px",borderRadius:"10px",background:"#1a56db",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>
+                    {found.name?.[0]?.toUpperCase()}
                   </div>
                   <div>
                     <p style={{fontWeight:700,color:"#0f172a"}}>{found.name}</p>
-                    <p style={{fontSize:"12px",color:"#94a3b8"}}>{found.phone} · {found.currentBatch?.name||"No batch"}</p>
+                    <p style={{fontSize:"12px",color:"#94a3b8"}}>{found.phone||found.guardianPhone}</p>
                   </div>
                 </div>
-                <p style={{fontSize:"12px",color:"#64748b"}}>Guardian: {found.guardianName||"—"} ({found.guardianPhone||"—"})</p>
               </div>
             )}
           </div>
 
           <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"24px"}}>
-            <h3 style={{fontWeight:700,color:"#0f172a",marginBottom:"16px"}}>Fee Details</h3>
+            <h3 style={{fontWeight:700,color:"#0f172a",marginBottom:"16px"}}>Collect Payment</h3>
             <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
-                <div>
-                  <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>AMOUNT (₹) *</label>
-                  <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="2000"
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
-                </div>
-                <div>
-                  <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>DISCOUNT (₹)</label>
-                  <input type="number" value={form.discount} onChange={e=>setForm({...form,discount:e.target.value})} placeholder="0"
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
-                </div>
+              <div>
+                <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>AMOUNT *</label>
+                <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0"
+                  style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
               </div>
               <div>
-                <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"8px"}}>PAYMENT MODE</label>
+                <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>DISCOUNT</label>
+                <input type="number" value={form.discount} onChange={e=>setForm({...form,discount:e.target.value})}
+                  style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+              </div>
+              <div>
+                <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>PAYMENT MODE</label>
                 <div style={{display:"flex",gap:"8px"}}>
                   {["cash","upi","cheque","online"].map(m=>(
                     <button key={m} onClick={()=>setForm({...form,paymentMode:m})}
-                      style={{flex:1,padding:"9px",borderRadius:"9px",border:"1.5px solid",fontSize:"12px",fontWeight:600,cursor:"pointer",textTransform:"capitalize",
-                        borderColor:form.paymentMode===m?(MODE_COLORS[m]||"#1a56db"):"#e2e8f0",
-                        background:form.paymentMode===m?"#eff6ff":"#fff",
-                        color:form.paymentMode===m?(MODE_COLORS[m]||"#1a56db"):"#94a3b8"}}>
+                      style={{flex:1,padding:"8px",borderRadius:"8px",border:form.paymentMode===m?`1.5px solid ${MODE_COLORS[m]}`:"1.5px solid #e2e8f0",
+                        background:form.paymentMode===m?`${MODE_COLORS[m]}15`:"#fff",color:form.paymentMode===m?MODE_COLORS[m]:"#64748b",
+                        fontWeight:600,fontSize:"12px",cursor:"pointer",textTransform:"uppercase"}}>
                       {m}
                     </button>
                   ))}
@@ -295,6 +331,34 @@ export default function Fees() {
             <p style={{fontWeight:600,color:"#15803d"}}>Total Collected This Month</p>
             <p style={{fontSize:"28px",fontWeight:800,color:"#16a34a"}}>₹{(feeReport?.totalCollected||0).toLocaleString()}</p>
           </div>
+
+          {feeReport?.fees?.length>0&&(
+            <div style={{marginTop:"20px",border:"1px solid #f1f5f9",borderRadius:"12px",overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:"13px"}}>
+                <thead><tr style={{background:"#f8fafc"}}>
+                  {["Student","Batch","Receipt No","Amount","Receipt"].map(h=>(
+                    <th key={h} style={{textAlign:"left",padding:"12px 16px",color:"#64748b",fontWeight:600,fontSize:"12px"}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {feeReport.fees.map((f,i)=>(
+                    <tr key={f._id} style={{borderTop:"1px solid #f8fafc",background:i%2===0?"#fff":"#fafafa"}}>
+                      <td style={{padding:"12px 16px",fontWeight:600,color:"#0f172a"}}>{f.studentId?.name||"—"}</td>
+                      <td style={{padding:"12px 16px",color:"#64748b"}}>{f.batchId?.name||"—"}</td>
+                      <td style={{padding:"12px 16px",color:"#64748b"}}>{f.receiptNumber||"—"}</td>
+                      <td style={{padding:"12px 16px",fontWeight:700,color:"#16a34a"}}>₹{f.finalAmount?.toLocaleString()}</td>
+                      <td style={{padding:"12px 16px"}}>
+                        <button onClick={()=>downloadReceipt(f._id, f.receiptNumber)} disabled={downloadingId===f._id}
+                          style={{padding:"5px 10px",background:"#eff6ff",color:"#1a56db",border:"none",borderRadius:"7px",cursor:"pointer",fontSize:"11px",fontWeight:600}}>
+                          {downloadingId===f._id?"...":"⬇️ PDF"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>
