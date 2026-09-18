@@ -18,10 +18,10 @@ export default function AddStudent() {
 
   const mutation = useMutation({
     mutationFn: (data) => api.post("/students", data),
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries(["students"]);
       toast.success("Student added!");
-      navigate("/students");
+      navigate(`/students/${res.data.data._id}`);
     },
     onError: (err) => toast.error(err.response?.data?.message || "Failed"),
   });

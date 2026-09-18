@@ -91,8 +91,8 @@ export default function Students() {
                   onMouseLeave={e=>e.currentTarget.style.background=i%2===0?"#fff":"#fafafa"}>
                   <td style={{padding:"12px 16px"}}>
                     <Link to={`/students/${s._id}`} style={{display:"flex",alignItems:"center",gap:"10px",textDecoration:"none"}}>
-                      <div style={{width:"36px",height:"36px",borderRadius:"50%",background:"#eff6ff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,color:"#1a56db",fontSize:"14px",flexShrink:0}}>
-                        {s.name[0]}
+                      <div style={{width:"36px",height:"36px",borderRadius:"50%",background:"#eff6ff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,color:"#1a56db",fontSize:"14px",flexShrink:0,overflow:"hidden"}}>
+                        {s.photo?<img src={s.photo} alt={s.name} style={{width:"100%",height:"100%",objectFit:"cover"}} />:s.name[0]}
                       </div>
                       <div>
                         <p style={{fontWeight:600,color:"#0f172a"}}>{s.name}</p>

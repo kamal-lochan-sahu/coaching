@@ -1,18 +1,45 @@
+import { useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Edit } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Edit, Camera } from "lucide-react";
 import api from "../../services/api";
 import Loader from "../../components/ui/Loader";
+import toast from "react-hot-toast";
 
 const GRADE_COLOR = { "A+":"#16a34a","A":"#16a34a","B+":"#0891b2","B":"#0891b2","C":"#d97706","D":"#d97706","F":"#dc2626" };
 
 export default function StudentDetail() {
   const { id } = useParams();
+  const qc = useQueryClient();
+  const fileInputRef = useRef(null);
 
   const { data: history, isLoading } = useQuery({
     queryKey: ["student-history", id],
     queryFn:  () => api.get(`/students/${id}/history`).then(r => r.data.data),
   });
+
+  const uploadPhoto = useMutation({
+    mutationFn: (file) => {
+      const formData = new FormData();
+      formData.append("photo", file);
+      return api.post(`/upload/student/${id}/photo`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Photo updated!");
+      qc.invalidateQueries(["student-history", id]);
+    },
+    onError: (e) => toast.error(e.response?.data?.message || "Photo upload failed"),
+  });
+
+  const handlePhotoSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Image must be under 5MB"); return; }
+    uploadPhoto.mutate(file);
+    e.target.value = "";
+  };
 
   if (isLoading) return <Loader />;
   const { student, attendance=[], fees=[], results=[] } = history || {};
@@ -45,8 +72,21 @@ export default function StudentDetail() {
       <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:"16px"}}>
         {/* Profile Card */}
         <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"24px"}}>
-          <div style={{width:"64px",height:"64px",borderRadius:"50%",background:"#eff6ff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px",fontWeight:800,color:"#1a56db",marginBottom:"16px"}}>
-            {student.name[0]}
+          <div style={{position:"relative",width:"64px",height:"64px",marginBottom:"16px"}}>
+            {student.photo?(
+              <img src={student.photo} alt={student.name}
+                style={{width:"64px",height:"64px",borderRadius:"50%",objectFit:"cover",border:"1px solid #e2e8f0"}} />
+            ):(
+              <div style={{width:"64px",height:"64px",borderRadius:"50%",background:"#eff6ff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"26px",fontWeight:800,color:"#1a56db"}}>
+                {student.name[0]}
+              </div>
+            )}
+            <button onClick={()=>fileInputRef.current?.click()} disabled={uploadPhoto.isPending}
+              title="Change photo"
+              style={{position:"absolute",bottom:"-2px",right:"-2px",width:"24px",height:"24px",borderRadius:"50%",background:"#1a56db",border:"2px solid #fff",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+              <Camera size={12} color="#fff" />
+            </button>
+            <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePhotoSelect} style={{display:"none"}} />
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:"8px",fontSize:"13px"}}>
             {[
