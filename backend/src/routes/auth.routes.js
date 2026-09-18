@@ -3,6 +3,7 @@ import {
   register, login, logout,
   refreshToken, getMe,
   updateProfile, changePassword,
+  forgotPassword, resetPassword,
 } from "../controllers/auth.controller.js";
 import { protect } from "../middleware/auth.middleware.js";
 import { authRateLimiter } from "../middleware/error.middleware.js";
@@ -29,6 +30,16 @@ const changePasswordSchema = Joi.object({
   newPassword:     Joi.string().min(8).required(),
 });
 
+const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+const resetPasswordSchema = Joi.object({
+  email:       Joi.string().email().required(),
+  otp:         Joi.string().length(6).pattern(/^\d+$/).required(),
+  newPassword: Joi.string().min(8).required(),
+});
+
 router.post("/register", authRateLimiter, validate(registerSchema), register);
 router.post("/login",    authRateLimiter, validate(loginSchema),    login);
 router.post("/logout",   protect, logout);
@@ -36,5 +47,7 @@ router.post("/refresh-token", refreshToken);
 router.get ("/me",       protect, getMe);
 router.put ("/update-profile",    protect, updateProfile);
 router.put ("/change-password",   protect, validate(changePasswordSchema), changePassword);
+router.post("/forgot-password",   authRateLimiter, validate(forgotPasswordSchema), forgotPassword);
+router.post("/reset-password",    authRateLimiter, validate(resetPasswordSchema),  resetPassword);
 
 export default router;

@@ -54,4 +54,13 @@ export const emailTemplates = {
       <h2 style="color:#dc2626;">⚠️ Low Attendance Alert</h2>
       <p>Dear Parent, <strong>${studentName}</strong>'s attendance for ${month} is <strong style="color:#dc2626;">${percentage}%</strong> — below required 80%.</p>
     </div>`,
+
+  passwordResetOtp: (name, otp) => `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;border:1px solid #e5e7eb;border-radius:8px;">
+      <h2 style="color:${process.env.BRAND_COLOR||"#3b82f6"};">Password Reset Code</h2>
+      <p>Hi ${name || ""},</p>
+      <p>Use the code below to reset your EduManage password. This code expires in 10 minutes.</p>
+      <div style="font-size:28px;font-weight:bold;letter-spacing:6px;text-align:center;padding:16px;background:#f3f4f6;border-radius:8px;margin:16px 0;">${otp}</div>
+      <p style="color:#6b7280;font-size:13px;">If you didn't request this, you can safely ignore this email.</p>
+    </div>`,
 };

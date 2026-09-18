@@ -1,9 +1,12 @@
+import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import { Settings } from "../models/Management.js";
 import { generateTokenPair, verifyRefreshToken, REFRESH_COOKIE_OPTIONS } from "../utils/jwt.utils.js";
 import { ApiError } from "../utils/ApiHelpers.js";
 import { ApiResponse } from "../utils/ApiHelpers.js";
 import { asyncHandler } from "../utils/ApiHelpers.js";
+import { sendEmail, emailTemplates } from "../config/email.js";
 
 // POST /api/auth/register
 export const register = asyncHandler(async (req, res) => {
@@ -128,4 +131,64 @@ export const changePassword = asyncHandler(async (req, res) => {
   await user.save();
 
   return res.status(200).json(new ApiResponse(200, null, "Password changed successfully"));
+});
+
+// POST /api/auth/forgot-password
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const genericMessage = "If an account exists for this email, a reset code has been sent.";
+
+  const user = await User.findOne({ email });
+  // Always respond the same way — don't reveal whether the email is registered.
+  if (!user) {
+    return res.status(200).json(new ApiResponse(200, null, genericMessage));
+  }
+
+  const otp = crypto.randomInt(100000, 999999).toString();
+  const hashedOtp = await bcrypt.hash(otp, 10);
+
+  user.passwordResetToken  = hashedOtp;
+  user.passwordResetExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  await user.save({ validateBeforeSave: false });
+
+  const result = await sendEmail({
+    to: user.email,
+    subject: "Your EduManage password reset code",
+    html: emailTemplates.passwordResetOtp(user.name, otp),
+  });
+
+  if (!result.success) {
+    // Email service not configured / send failed — don't leak details to the client.
+    console.error(`Password reset email failed for ${user.email}: ${result.reason}`);
+  }
+
+  return res.status(200).json(new ApiResponse(200, null, genericMessage));
+});
+
+// POST /api/auth/reset-password
+export const resetPassword = asyncHandler(async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+
+  const user = await User.findOne({ email }).select("+passwordResetToken +passwordResetExpiry");
+  if (!user || !user.passwordResetToken || !user.passwordResetExpiry) {
+    throw new ApiError(400, "Invalid or expired reset code");
+  }
+
+  if (user.passwordResetExpiry.getTime() < Date.now()) {
+    user.passwordResetToken  = undefined;
+    user.passwordResetExpiry = undefined;
+    await user.save({ validateBeforeSave: false });
+    throw new ApiError(400, "Reset code has expired. Please request a new one.");
+  }
+
+  const isValidOtp = await bcrypt.compare(otp, user.passwordResetToken);
+  if (!isValidOtp) throw new ApiError(400, "Invalid or expired reset code");
+
+  user.password = newPassword;
+  user.passwordResetToken  = undefined;
+  user.passwordResetExpiry = undefined;
+  user.refreshToken = null; // force re-login everywhere
+  await user.save();
+
+  return res.status(200).json(new ApiResponse(200, null, "Password reset successfully. Please log in."));
 });
