@@ -2,8 +2,11 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { validateForm, isRequired, isPositiveNumber } from "../../utils/validation";
 
 const GRADE_COLOR = { "A+":"#16a34a","A":"#16a34a","B+":"#0891b2","B":"#0891b2","C":"#d97706","D":"#d97706","F":"#dc2626" };
+
+const TEST_RULES = { name: [isRequired], batchId: [isRequired], totalMarks: [isRequired, isPositiveNumber] };
 
 export default function Tests() {
   const qc = useQueryClient();
@@ -12,6 +15,7 @@ export default function Tests() {
   const [selectedTest,setSelectedTest]= useState(null);
   const [marksMap,    setMarksMap]    = useState({});
   const [form, setForm] = useState({ name:"",subject:"",batchId:"",branchId:"",date:new Date().toISOString().slice(0,10),totalMarks:100,passingMarks:40 });
+  const [errors, setErrors] = useState({});
 
   const { data: tests=[]   } = useQuery({ queryKey:["tests"],   queryFn:()=>api.get("/tests").then(r=>r.data.data) });
   const { data: batches=[]  } = useQuery({ queryKey:["batches"], queryFn:()=>api.get("/batches").then(r=>r.data.data) });
@@ -47,13 +51,21 @@ export default function Tests() {
     enterResults.mutate({ id:selectedTest._id, results });
   };
 
+  const handleCreateTest = () => {
+    const newErrors = validateForm(form, TEST_RULES);
+    if (Number(form.passingMarks) > Number(form.totalMarks)) newErrors.passingMarks = "Passing marks cannot exceed total marks";
+    if (Object.keys(newErrors).length) { setErrors(newErrors); toast.error("Please fix the highlighted fields"); return; }
+    setErrors({});
+    createTest.mutate(form);
+  };
+
   return (
     <div style={{display:"flex",flexDirection:"column",gap:"24px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
         <div><h1 style={{fontSize:"24px",fontWeight:800,color:"#0f172a"}}>Tests & Results</h1>
           <p style={{fontSize:"13px",color:"#94a3b8",marginTop:"2px"}}>Create tests, enter marks, auto-generate rankings</p>
         </div>
-        <button onClick={()=>setShowCreate(true)}
+        <button onClick={()=>{ setErrors({}); setShowCreate(true); }}
           style={{padding:"10px 20px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"10px",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>
           + Create Test
         </button>
@@ -188,15 +200,19 @@ export default function Tests() {
             <h2 style={{fontSize:"18px",fontWeight:800,color:"#0f172a",marginBottom:"24px"}}>Create Test</h2>
             <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
               <div><label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>TEST NAME *</label>
-                <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Unit Test 1"
-                  style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} /></div>
+                <input value={form.name} onChange={e=>{setForm({...form,name:e.target.value}); if(errors.name) setErrors({...errors,name:""});}} placeholder="Unit Test 1"
+                  style={{width:"100%",padding:"10px 14px",border:errors.name?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                {errors.name && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.name}</p>}
+              </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
                 <div><label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>BATCH *</label>
-                  <select value={form.batchId} onChange={e=>{ const b=batches.find(x=>x._id===e.target.value); setForm({...form,batchId:e.target.value,branchId:b?.branchId||""}); }}
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
+                  <select value={form.batchId} onChange={e=>{ const b=batches.find(x=>x._id===e.target.value); setForm({...form,batchId:e.target.value,branchId:b?.branchId||""}); if(errors.batchId) setErrors({...errors,batchId:""}); }}
+                    style={{width:"100%",padding:"10px 14px",border:errors.batchId?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
                     <option value="">Select...</option>
                     {batches.map(b=><option key={b._id} value={b._id}>{b.name}</option>)}
-                  </select></div>
+                  </select>
+                  {errors.batchId && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.batchId}</p>}
+                </div>
                 <div><label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>SUBJECT</label>
                   <input value={form.subject} onChange={e=>setForm({...form,subject:e.target.value})} placeholder="Math"
                     style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} /></div>
@@ -206,16 +222,20 @@ export default function Tests() {
                   <input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})}
                     style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} /></div>
                 <div><label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>TOTAL MARKS</label>
-                  <input type="number" value={form.totalMarks} onChange={e=>setForm({...form,totalMarks:e.target.value})}
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} /></div>
+                  <input type="number" value={form.totalMarks} onChange={e=>{setForm({...form,totalMarks:e.target.value}); if(errors.totalMarks) setErrors({...errors,totalMarks:""});}}
+                    style={{width:"100%",padding:"10px 14px",border:errors.totalMarks?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  {errors.totalMarks && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.totalMarks}</p>}
+                </div>
                 <div><label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>PASSING</label>
-                  <input type="number" value={form.passingMarks} onChange={e=>setForm({...form,passingMarks:e.target.value})}
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} /></div>
+                  <input type="number" value={form.passingMarks} onChange={e=>{setForm({...form,passingMarks:e.target.value}); if(errors.passingMarks) setErrors({...errors,passingMarks:""});}}
+                    style={{width:"100%",padding:"10px 14px",border:errors.passingMarks?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  {errors.passingMarks && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.passingMarks}</p>}
+                </div>
               </div>
             </div>
             <div style={{display:"flex",gap:"12px",marginTop:"24px"}}>
               <button onClick={()=>setShowCreate(false)} style={{flex:1,padding:"11px",border:"1.5px solid #e2e8f0",borderRadius:"10px",cursor:"pointer",background:"#fff",color:"#64748b",fontWeight:600}}>Cancel</button>
-              <button onClick={()=>createTest.mutate(form)} disabled={createTest.isPending}
+              <button onClick={handleCreateTest} disabled={createTest.isPending}
                 style={{flex:1,padding:"11px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"10px",cursor:"pointer",fontWeight:700}}>
                 {createTest.isPending?"Creating...":"Create Test"}
               </button>

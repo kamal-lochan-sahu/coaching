@@ -2,23 +2,32 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { validateForm, isRequired, isPositiveNumber } from "../../utils/validation";
 
 const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
 const emptyForm = { name:"", branchId:"", subjects:"", startTime:"", endTime:"", days:[], capacity:30, amount:"", frequency:"monthly", dueDate:5, description:"" };
+
+const RULES = {
+  name:     [isRequired],
+  branchId: [isRequired],
+  amount:   [isRequired, isPositiveNumber],
+};
 
 export default function Batches() {
   const qc = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editing,   setEditing]   = useState(null);
   const [form,      setForm]      = useState(emptyForm);
+  const [errors,    setErrors]    = useState({});
 
   const { data:batches=[], isLoading } = useQuery({ queryKey:["batches"], queryFn:()=>api.get("/batches?isActive=all").then(r=>r.data.data) });
   const { data:branches=[] }           = useQuery({ queryKey:["branches"], queryFn:()=>api.get("/branches").then(r=>r.data.data) });
 
-  const openAdd = () => { setEditing(null); setForm(emptyForm); setShowModal(true); };
+  const openAdd = () => { setEditing(null); setForm(emptyForm); setErrors({}); setShowModal(true); };
   const openEdit = (b) => {
     setEditing(b);
+    setErrors({});
     setForm({
       name:        b.name,
       branchId:    b.branchId,
@@ -54,7 +63,13 @@ export default function Batches() {
   const toggleDay = d => setForm({...form, days: form.days.includes(d)?form.days.filter(x=>x!==d):[...form.days,d]});
 
   const handleSubmit = () => {
-    if (!form.name||!form.branchId||!form.amount) return toast.error("Name, branch and fee required");
+    const newErrors = validateForm(form, RULES);
+    if (Object.keys(newErrors).length) {
+      setErrors(newErrors);
+      toast.error("Please fix the highlighted fields");
+      return;
+    }
+    setErrors({});
     const payload = {
       ...form,
       subjects:     form.subjects.split(",").map(s=>s.trim()).filter(Boolean),
@@ -157,16 +172,18 @@ export default function Batches() {
             <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
               <div>
                 <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>BATCH NAME *</label>
-                <input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="e.g. Class 10 - Morning"
-                  style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                <input value={form.name} onChange={e=>{setForm({...form,name:e.target.value}); if(errors.name) setErrors({...errors,name:""});}} placeholder="e.g. Class 10 - Morning"
+                  style={{width:"100%",padding:"10px 14px",border:errors.name?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                {errors.name && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.name}</p>}
               </div>
               <div>
                 <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>BRANCH *</label>
-                <select value={form.branchId} onChange={e=>setForm({...form,branchId:e.target.value})}
-                  style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
+                <select value={form.branchId} onChange={e=>{setForm({...form,branchId:e.target.value}); if(errors.branchId) setErrors({...errors,branchId:""});}}
+                  style={{width:"100%",padding:"10px 14px",border:errors.branchId?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
                   <option value="">Select Branch</option>
                   {branches.map(b=><option key={b._id} value={b._id}>{b.name}</option>)}
                 </select>
+                {errors.branchId && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.branchId}</p>}
               </div>
               <div>
                 <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>SUBJECTS (comma separated)</label>
@@ -202,8 +219,9 @@ export default function Batches() {
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
                 <div>
                   <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>MONTHLY FEE (₹) *</label>
-                  <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="2000"
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  <input type="number" value={form.amount} onChange={e=>{setForm({...form,amount:e.target.value}); if(errors.amount) setErrors({...errors,amount:""});}} placeholder="2000"
+                    style={{width:"100%",padding:"10px 14px",border:errors.amount?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  {errors.amount && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.amount}</p>}
                 </div>
                 <div>
                   <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>CAPACITY</label>

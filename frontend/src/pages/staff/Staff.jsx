@@ -2,6 +2,16 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { validateForm, isRequired, isEmail, isPhone, minLength, isPositiveNumber } from "../../utils/validation";
+
+const ADD_STAFF_RULES = {
+  name:     [isRequired],
+  email:    [isRequired, isEmail],
+  phone:    [isPhone],
+  password: [isRequired, minLength(8)],
+  branchId: [isRequired],
+};
+const SALARY_RULES = { basicSalary: [isRequired, isPositiveNumber] };
 
 export default function Staff() {
   const qc = useQueryClient();
@@ -11,8 +21,10 @@ export default function Staff() {
   const [showHistory,setShowHistory]= useState(null);
 
   const [addForm, setAddForm] = useState({ name:"",email:"",phone:"",password:"",role:"teacher",designation:"",subjects:"",branchId:"",salaryAmount:"" });
+  const [addErrors, setAddErrors] = useState({});
   const [editForm,setEditForm]= useState({});
   const [salaryForm, setSalaryForm] = useState({ month:new Date().getMonth()+1, year:new Date().getFullYear(), basicSalary:"", advance:"0", deductions:"0", bonus:"0", paymentMode:"bank_transfer", note:"" });
+  const [salaryErrors, setSalaryErrors] = useState({});
 
   const { data:staff=[], isLoading }    = useQuery({ queryKey:["staff"],    queryFn:()=>api.get("/staff").then(r=>r.data.data) });
   const { data:branches=[] }            = useQuery({ queryKey:["branches"], queryFn:()=>api.get("/branches").then(r=>r.data.data) });
@@ -50,6 +62,20 @@ export default function Staff() {
     setShowEdit(s);
   };
 
+  const handleAddStaff = () => {
+    const newErrors = validateForm(addForm, ADD_STAFF_RULES);
+    if (Object.keys(newErrors).length) { setAddErrors(newErrors); toast.error("Please fix the highlighted fields"); return; }
+    setAddErrors({});
+    addStaff.mutate({ ...addForm, subjects:addForm.subjects.split(",").map(s=>s.trim()).filter(Boolean), salary:{ amount:Number(addForm.salaryAmount)||0, paymentDay:1 } });
+  };
+
+  const handlePaySalary = () => {
+    const newErrors = validateForm(salaryForm, SALARY_RULES);
+    if (Object.keys(newErrors).length) { setSalaryErrors(newErrors); toast.error("Please fix the highlighted fields"); return; }
+    setSalaryErrors({});
+    paySalary.mutate({ id:showSalary._id, ...salaryForm, basicSalary:Number(salaryForm.basicSalary), advance:Number(salaryForm.advance||0), deductions:Number(salaryForm.deductions||0), bonus:Number(salaryForm.bonus||0), netSalary });
+  };
+
   const netSalary = Number(salaryForm.basicSalary||0)+Number(salaryForm.bonus||0)-Number(salaryForm.advance||0)-Number(salaryForm.deductions||0);
 
   const ROLE_COLORS = { owner:"#7c3aed",admin:"#d97706",teacher:"#1a56db",receptionist:"#16a34a" };
@@ -61,7 +87,7 @@ export default function Staff() {
           <h1 style={{fontSize:"24px",fontWeight:800,color:"#0f172a"}}>Staff Management</h1>
           <p style={{fontSize:"13px",color:"#94a3b8",marginTop:"2px"}}>{staff.length} staff members</p>
         </div>
-        <button onClick={()=>setShowAdd(true)}
+        <button onClick={()=>{ setAddErrors({}); setShowAdd(true); }}
           style={{padding:"10px 20px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"10px",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>
           + Add Staff
         </button>
@@ -97,7 +123,7 @@ export default function Staff() {
                   style={{padding:"8px",background:"#eff6ff",color:"#1a56db",border:"none",borderRadius:"8px",cursor:"pointer",fontSize:"12px",fontWeight:600}}>
                   ✏️ Edit
                 </button>
-                <button onClick={()=>{ setShowSalary(s); setSalaryForm({...salaryForm,basicSalary:s.salary?.amount||""}); }}
+                <button onClick={()=>{ setShowSalary(s); setSalaryErrors({}); setSalaryForm({...salaryForm,basicSalary:s.salary?.amount||""}); }}
                   style={{padding:"8px",background:"#f0fdf4",color:"#16a34a",border:"none",borderRadius:"8px",cursor:"pointer",fontSize:"12px",fontWeight:600}}>
                   💸 Pay
                 </button>
@@ -122,11 +148,12 @@ export default function Staff() {
           <div style={{background:"#fff",borderRadius:"20px",padding:"32px",width:"100%",maxWidth:"500px",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.15)"}}>
             <h2 style={{fontSize:"18px",fontWeight:800,color:"#0f172a",marginBottom:"24px"}}>Add Staff Member</h2>
             <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
-              {[["Full Name *","name","text","Ramesh Kumar"],["Email *","email","email","teacher@school.com"],["Phone","phone","tel","9876543210"],["Password","password","text","min 8 chars"]].map(([label,key,type,ph])=>(
+              {[["Full Name *","name","text","Ramesh Kumar"],["Email *","email","email","teacher@school.com"],["Phone","phone","tel","9876543210"],["Password *","password","text","min 8 chars"]].map(([label,key,type,ph])=>(
                 <div key={key}>
                   <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>{label}</label>
-                  <input type={type} value={addForm[key]} onChange={e=>setAddForm({...addForm,[key]:e.target.value})} placeholder={ph}
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  <input type={type} value={addForm[key]} onChange={e=>{setAddForm({...addForm,[key]:e.target.value}); if(addErrors[key]) setAddErrors({...addErrors,[key]:""});}} placeholder={ph}
+                    style={{width:"100%",padding:"10px 14px",border:addErrors[key]?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  {addErrors[key] && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{addErrors[key]}</p>}
                 </div>
               ))}
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
@@ -141,11 +168,12 @@ export default function Staff() {
                 </div>
                 <div>
                   <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>BRANCH *</label>
-                  <select value={addForm.branchId} onChange={e=>setAddForm({...addForm,branchId:e.target.value})}
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
+                  <select value={addForm.branchId} onChange={e=>{setAddForm({...addForm,branchId:e.target.value}); if(addErrors.branchId) setAddErrors({...addErrors,branchId:""});}}
+                    style={{width:"100%",padding:"10px 14px",border:addErrors.branchId?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
                     <option value="">Select...</option>
                     {branches.map(b=><option key={b._id} value={b._id}>{b.name}</option>)}
                   </select>
+                  {addErrors.branchId && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{addErrors.branchId}</p>}
                 </div>
               </div>
               <div>
@@ -166,7 +194,7 @@ export default function Staff() {
             </div>
             <div style={{display:"flex",gap:"12px",marginTop:"24px"}}>
               <button onClick={()=>setShowAdd(false)} style={{flex:1,padding:"11px",border:"1.5px solid #e2e8f0",borderRadius:"10px",cursor:"pointer",background:"#fff",color:"#64748b",fontWeight:600}}>Cancel</button>
-              <button onClick={()=>addStaff.mutate({ ...addForm, subjects:addForm.subjects.split(",").map(s=>s.trim()).filter(Boolean), salary:{ amount:Number(addForm.salaryAmount)||0, paymentDay:1 } })}
+              <button onClick={handleAddStaff}
                 disabled={addStaff.isPending}
                 style={{flex:1,padding:"11px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"10px",cursor:"pointer",fontWeight:700}}>
                 {addStaff.isPending?"Adding...":"Add Staff"}
@@ -239,8 +267,9 @@ export default function Staff() {
               {[["BASIC SALARY (₹) *","basicSalary"],["ADVANCE (₹)","advance"],["DEDUCTIONS (₹)","deductions"],["BONUS (₹)","bonus"]].map(([label,key])=>(
                 <div key={key}>
                   <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>{label}</label>
-                  <input type="number" value={salaryForm[key]} onChange={e=>setSalaryForm({...salaryForm,[key]:e.target.value})} placeholder="0"
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  <input type="number" value={salaryForm[key]} onChange={e=>{setSalaryForm({...salaryForm,[key]:e.target.value}); if(salaryErrors[key]) setSalaryErrors({...salaryErrors,[key]:""});}} placeholder="0"
+                    style={{width:"100%",padding:"10px 14px",border:salaryErrors[key]?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  {salaryErrors[key] && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{salaryErrors[key]}</p>}
                 </div>
               ))}
               <div>
@@ -260,8 +289,8 @@ export default function Staff() {
             </div>
             <div style={{display:"flex",gap:"12px",marginTop:"24px"}}>
               <button onClick={()=>setShowSalary(null)} style={{flex:1,padding:"11px",border:"1.5px solid #e2e8f0",borderRadius:"10px",cursor:"pointer",background:"#fff",color:"#64748b",fontWeight:600}}>Cancel</button>
-              <button onClick={()=>paySalary.mutate({ id:showSalary._id, ...salaryForm, basicSalary:Number(salaryForm.basicSalary), advance:Number(salaryForm.advance||0), deductions:Number(salaryForm.deductions||0), bonus:Number(salaryForm.bonus||0), netSalary })}
-                disabled={!salaryForm.basicSalary||paySalary.isPending}
+              <button onClick={handlePaySalary}
+                disabled={paySalary.isPending}
                 style={{flex:1,padding:"11px",background:"#16a34a",color:"#fff",border:"none",borderRadius:"10px",cursor:"pointer",fontWeight:700}}>
                 {paySalary.isPending?"Paying...":"Pay Salary"}
               </button>

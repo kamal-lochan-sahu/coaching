@@ -2,15 +2,19 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { validateForm, isRequired, isPositiveNumber } from "../../utils/validation";
 
 const CATS = { rent:"🏠", salary:"👤", electricity:"⚡", stationery:"📝", maintenance:"🔧", marketing:"📣", equipment:"💻", other:"📦" };
 const CAT_COLORS = { rent:"#7c3aed",salary:"#1a56db",electricity:"#d97706",stationery:"#0891b2",maintenance:"#16a34a",marketing:"#db2777",equipment:"#dc2626",other:"#64748b" };
+
+const EXPENSE_RULES = { amount: [isRequired, isPositiveNumber], branchId: [isRequired] };
 
 export default function Expenses() {
   const qc = useQueryClient();
   const [showAdd,  setShowAdd]  = useState(false);
   const [month,    setMonth]    = useState(new Date().toISOString().slice(0,7));
   const [form, setForm] = useState({ category:"rent",amount:"",description:"",date:new Date().toISOString().slice(0,10),branchId:"" });
+  const [errors, setErrors] = useState({});
 
   const { data:expenses=[], isLoading } = useQuery({
     queryKey:["expenses",month],
@@ -27,6 +31,13 @@ export default function Expenses() {
 
   const total = expenses.reduce((s,e)=>s+e.amount,0);
 
+  const handleAddExpense = () => {
+    const newErrors = validateForm(form, EXPENSE_RULES);
+    if (Object.keys(newErrors).length) { setErrors(newErrors); toast.error("Please fix the highlighted fields"); return; }
+    setErrors({});
+    add.mutate({...form,amount:Number(form.amount)});
+  };
+
   return (
     <div style={{display:"flex",flexDirection:"column",gap:"24px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
@@ -35,7 +46,7 @@ export default function Expenses() {
         <div style={{display:"flex",gap:"12px",alignItems:"center"}}>
           <input type="month" value={month} onChange={e=>setMonth(e.target.value)}
             style={{padding:"9px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}} />
-          <button onClick={()=>setShowAdd(true)}
+          <button onClick={()=>{ setErrors({}); setShowAdd(true); }}
             style={{padding:"10px 20px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"10px",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>
             + Add Expense
           </button>
@@ -136,8 +147,10 @@ export default function Expenses() {
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"12px"}}>
                 <div><label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>AMOUNT (₹) *</label>
-                  <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="5000"
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} /></div>
+                  <input type="number" value={form.amount} onChange={e=>{setForm({...form,amount:e.target.value}); if(errors.amount) setErrors({...errors,amount:""});}} placeholder="5000"
+                    style={{width:"100%",padding:"10px 14px",border:errors.amount?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  {errors.amount && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.amount}</p>}
+                </div>
                 <div><label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>DATE</label>
                   <input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})}
                     style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} /></div>
@@ -145,16 +158,18 @@ export default function Expenses() {
               <div><label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>DESCRIPTION</label>
                 <input value={form.description} onChange={e=>setForm({...form,description:e.target.value})} placeholder="May month rent..."
                   style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} /></div>
-              <div><label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>BRANCH</label>
-                <select value={form.branchId} onChange={e=>setForm({...form,branchId:e.target.value})}
-                  style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
+              <div><label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>BRANCH *</label>
+                <select value={form.branchId} onChange={e=>{setForm({...form,branchId:e.target.value}); if(errors.branchId) setErrors({...errors,branchId:""});}}
+                  style={{width:"100%",padding:"10px 14px",border:errors.branchId?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
                   <option value="">Select branch...</option>
                   {branches.map(b=><option key={b._id} value={b._id}>{b.name}</option>)}
-                </select></div>
+                </select>
+                {errors.branchId && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.branchId}</p>}
+              </div>
             </div>
             <div style={{display:"flex",gap:"12px",marginTop:"24px"}}>
               <button onClick={()=>setShowAdd(false)} style={{flex:1,padding:"11px",border:"1.5px solid #e2e8f0",borderRadius:"10px",cursor:"pointer",background:"#fff",color:"#64748b",fontWeight:600}}>Cancel</button>
-              <button onClick={()=>add.mutate({...form,amount:Number(form.amount)})} disabled={add.isPending}
+              <button onClick={handleAddExpense} disabled={add.isPending}
                 style={{flex:1,padding:"11px",background:"#dc2626",color:"#fff",border:"none",borderRadius:"10px",cursor:"pointer",fontWeight:700}}>
                 {add.isPending?"Saving...":"Record Expense"}
               </button>

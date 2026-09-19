@@ -3,6 +3,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../services/api";
 import { useAuthStore } from "../store/authStore";
 import toast from "react-hot-toast";
+import { validateForm, isRequired, isEmail, isPhone } from "../utils/validation";
+
+const BRANCH_RULES = { name: [isRequired], phone: [isPhone], email: [isEmail] };
 
 export default function Settings() {
   const qc = useQueryClient();
@@ -14,6 +17,7 @@ export default function Settings() {
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
   const [branchForm, setBranchForm] = useState({ name:"",address:"",phone:"",email:"" });
+  const [branchErrors, setBranchErrors] = useState({});
 
   const { data:settings } = useQuery({ queryKey:["settings"], queryFn:()=>api.get("/settings").then(r=>r.data.data) });
   const { data:branches=[], refetch:refetchBranches } = useQuery({ queryKey:["branches"], queryFn:()=>api.get("/branches").then(r=>r.data.data) });
@@ -52,6 +56,19 @@ export default function Settings() {
     onError:(e)=>toast.error(e.response?.data?.message||"Failed"),
   });
 
+  const handleCreateBranch = () => {
+    const newErrors = validateForm(branchForm, BRANCH_RULES);
+    if (Object.keys(newErrors).length) { setBranchErrors(newErrors); toast.error("Please fix the highlighted fields"); return; }
+    setBranchErrors({});
+    createBranch.mutate(branchForm);
+  };
+  const handleUpdateBranch = () => {
+    const newErrors = validateForm(branchForm, BRANCH_RULES);
+    if (Object.keys(newErrors).length) { setBranchErrors(newErrors); toast.error("Please fix the highlighted fields"); return; }
+    setBranchErrors({});
+    updateBranch.mutate({ id:editingBranch._id, ...branchForm });
+  };
+
   const TABS = [
     {id:"institute",  label:"🏫 Institute"},
     {id:"branches",   label:"🏢 Branches"},
@@ -62,6 +79,7 @@ export default function Settings() {
 
   const openEdit = (b) => {
     setEditingBranch(b);
+    setBranchErrors({});
     setBranchForm({ name:b.name, address:b.address||"", phone:b.phone||"", email:b.email||"" });
   };
 
@@ -122,7 +140,7 @@ export default function Settings() {
               <h3 style={{fontWeight:700,color:"#0f172a"}}>Branch Management</h3>
               <p style={{fontSize:"12px",color:"#94a3b8",marginTop:"2px"}}>Add and manage your institute locations</p>
             </div>
-            <button onClick={()=>{ setEditingBranch(null); setBranchForm({ name:"",address:"",phone:"",email:"" }); setShowBranchModal(true); }}
+            <button onClick={()=>{ setEditingBranch(null); setBranchForm({ name:"",address:"",phone:"",email:"" }); setBranchErrors({}); setShowBranchModal(true); }}
               style={{padding:"10px 20px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"10px",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>
               + Add Branch
             </button>
@@ -242,14 +260,15 @@ export default function Settings() {
               {[["Branch Name *","name","text","e.g. North Campus"],["Address","address","text","e.g. 123 Main St, City"],["Phone","phone","tel","e.g. 9876543210"],["Email","email","email","e.g. branch@edumanage.com"]].map(([label,key,type,ph])=>(
                 <div key={key}>
                   <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>{label}</label>
-                  <input type={type} value={branchForm[key]} onChange={e=>setBranchForm({...branchForm,[key]:e.target.value})} placeholder={ph}
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  <input type={type} value={branchForm[key]} onChange={e=>{setBranchForm({...branchForm,[key]:e.target.value}); if(branchErrors[key]) setBranchErrors({...branchErrors,[key]:""});}} placeholder={ph}
+                    style={{width:"100%",padding:"10px 14px",border:branchErrors[key]?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  {branchErrors[key] && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{branchErrors[key]}</p>}
                 </div>
               ))}
             </div>
             <div style={{display:"flex",gap:"12px",marginTop:"24px"}}>
               <button onClick={()=>setShowBranchModal(false)} style={{flex:1,padding:"11px",border:"1.5px solid #e2e8f0",borderRadius:"10px",cursor:"pointer",background:"#fff",color:"#64748b",fontWeight:600}}>Cancel</button>
-              <button onClick={()=>createBranch.mutate(branchForm)} disabled={!branchForm.name||createBranch.isPending}
+              <button onClick={handleCreateBranch} disabled={createBranch.isPending}
                 style={{flex:1,padding:"11px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"10px",cursor:"pointer",fontWeight:700}}>
                 {createBranch.isPending?"Creating...":"Create Branch"}
               </button>
@@ -268,14 +287,15 @@ export default function Settings() {
               {[["Branch Name *","name","text"],["Address","address","text"],["Phone","phone","tel"],["Email","email","email"]].map(([label,key,type])=>(
                 <div key={key}>
                   <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>{label}</label>
-                  <input type={type} value={branchForm[key]} onChange={e=>setBranchForm({...branchForm,[key]:e.target.value})}
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  <input type={type} value={branchForm[key]} onChange={e=>{setBranchForm({...branchForm,[key]:e.target.value}); if(branchErrors[key]) setBranchErrors({...branchErrors,[key]:""});}}
+                    style={{width:"100%",padding:"10px 14px",border:branchErrors[key]?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  {branchErrors[key] && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{branchErrors[key]}</p>}
                 </div>
               ))}
             </div>
             <div style={{display:"flex",gap:"12px",marginTop:"24px"}}>
               <button onClick={()=>setEditingBranch(null)} style={{flex:1,padding:"11px",border:"1.5px solid #e2e8f0",borderRadius:"10px",cursor:"pointer",background:"#fff",color:"#64748b",fontWeight:600}}>Cancel</button>
-              <button onClick={()=>updateBranch.mutate({id:editingBranch._id,...branchForm})} disabled={!branchForm.name||updateBranch.isPending}
+              <button onClick={handleUpdateBranch} disabled={updateBranch.isPending}
                 style={{flex:1,padding:"11px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"10px",cursor:"pointer",fontWeight:700}}>
                 {updateBranch.isPending?"Saving...":"Save Changes"}
               </button>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { validateForm, isRequired } from "../../utils/validation";
 
 const TYPES = [
   { id:"custom",         label:"📢 Custom Notice",      desc:"Send any message to all/batch" },
@@ -10,8 +11,11 @@ const TYPES = [
   { id:"result",         label:"📊 Result Published",   desc:"Notify about new test results" },
 ];
 
+const NOTIF_RULES = { title: [isRequired], message: [isRequired] };
+
 export default function Notifications() {
   const [form, setForm] = useState({ type:"custom", title:"", message:"", channel:"whatsapp", recipientType:"all", batchId:"" });
+  const [errors, setErrors] = useState({});
   const [tab, setTab] = useState("send");
 
   const { data:batches=[]  } = useQuery({ queryKey:["batches"],  queryFn:()=>api.get("/batches").then(r=>r.data.data) });
@@ -22,6 +26,14 @@ export default function Notifications() {
     onSuccess: () => { toast.success("Notification queued!"); setForm({ type:"custom",title:"",message:"",channel:"whatsapp",recipientType:"all",batchId:"" }); },
     onError:   (e) => toast.error(e.response?.data?.message||"Failed"),
   });
+
+  const handleSend = () => {
+    const newErrors = validateForm(form, NOTIF_RULES);
+    if (form.recipientType === "batch" && !form.batchId) newErrors.batchId = "Select a batch";
+    if (Object.keys(newErrors).length) { setErrors(newErrors); toast.error("Please fix the highlighted fields"); return; }
+    setErrors({});
+    send.mutate(form);
+  };
 
   const CHANNEL_INFO = {
     whatsapp: "📱 WhatsApp (Twilio required)",
@@ -83,11 +95,12 @@ export default function Notifications() {
               {form.recipientType==="batch"&&(
                 <div>
                   <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>SELECT BATCH</label>
-                  <select value={form.batchId} onChange={e=>setForm({...form,batchId:e.target.value})}
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
+                  <select value={form.batchId} onChange={e=>{setForm({...form,batchId:e.target.value}); if(errors.batchId) setErrors({...errors,batchId:""});}}
+                    style={{width:"100%",padding:"10px 14px",border:errors.batchId?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
                     <option value="">Choose batch...</option>
                     {batches.map(b=><option key={b._id} value={b._id}>{b.name}</option>)}
                   </select>
+                  {errors.batchId && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.batchId}</p>}
                 </div>
               )}
             </div>
@@ -99,14 +112,16 @@ export default function Notifications() {
             <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
               <div>
                 <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>TITLE</label>
-                <input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="e.g. School Closed Tomorrow"
-                  style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                <input value={form.title} onChange={e=>{setForm({...form,title:e.target.value}); if(errors.title) setErrors({...errors,title:""});}} placeholder="e.g. School Closed Tomorrow"
+                  style={{width:"100%",padding:"10px 14px",border:errors.title?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                {errors.title && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.title}</p>}
               </div>
               <div>
                 <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>MESSAGE</label>
-                <textarea value={form.message} onChange={e=>setForm({...form,message:e.target.value})}
+                <textarea value={form.message} onChange={e=>{setForm({...form,message:e.target.value}); if(errors.message) setErrors({...errors,message:""});}}
                   placeholder="Type your message here..." rows={4}
-                  style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",resize:"none",boxSizing:"border-box"}} />
+                  style={{width:"100%",padding:"10px 14px",border:errors.message?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",resize:"none",boxSizing:"border-box"}} />
+                {errors.message && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.message}</p>}
               </div>
               <div>
                 <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"8px"}}>CHANNEL</label>
@@ -128,7 +143,7 @@ export default function Notifications() {
               <p style={{fontSize:"12px",color:"#92400e"}}>⚠️ WhatsApp/SMS requires Twilio credentials in backend. Email requires SMTP. In-app works always.</p>
             </div>
 
-            <button onClick={()=>send.mutate(form)} disabled={!form.title||!form.message||send.isPending}
+            <button onClick={handleSend} disabled={send.isPending}
               style={{marginTop:"16px",width:"100%",padding:"13px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"10px",fontWeight:700,cursor:"pointer",fontSize:"14px"}}>
               {send.isPending?"Sending...":"📤 Send Notification"}
             </button>

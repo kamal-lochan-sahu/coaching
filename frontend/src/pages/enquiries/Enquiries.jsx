@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { validateForm, isRequired, isEmail, isPhone } from "../../utils/validation";
 
 const STATUS = {
   new:       { color:"#1a56db", bg:"#eff6ff", label:"New" },
@@ -10,6 +11,8 @@ const STATUS = {
   lost:      { color:"#dc2626", bg:"#fef2f2", label:"Lost" },
 };
 
+const ENQUIRY_RULES = { name: [isRequired], phone: [isRequired, isPhone], email: [isEmail] };
+
 export default function Enquiries() {
   const qc = useQueryClient();
   const [filter,    setFilter]    = useState("all");
@@ -17,7 +20,9 @@ export default function Enquiries() {
   const [selected,  setSelected]  = useState(null);
   const [followUp,  setFollowUp]  = useState("");
   const [followDate,setFollowDate]= useState("");
+  const [followUpError, setFollowUpError] = useState("");
   const [form, setForm] = useState({ name:"",phone:"",email:"",interestedIn:"",source:"walk_in",branchId:"" });
+  const [errors, setErrors] = useState({});
 
   const { data:enquiries=[], isLoading } = useQuery({
     queryKey:["enquiries",filter],
@@ -44,12 +49,25 @@ export default function Enquiries() {
   const statsMap = stats.reduce((acc,s)=>({...acc,[s._id]:s.count}),{});
   const total    = stats.reduce((s,x)=>s+x.count,0);
 
+  const handleAddEnquiry = () => {
+    const newErrors = validateForm(form, ENQUIRY_RULES);
+    if (Object.keys(newErrors).length) { setErrors(newErrors); toast.error("Please fix the highlighted fields"); return; }
+    setErrors({});
+    addEnq.mutate(form);
+  };
+
+  const handleAddFollowUp = () => {
+    if (!followUp.trim()) { setFollowUpError("Note is required"); return; }
+    setFollowUpError("");
+    addFollowUp.mutate({ id:selected._id, text:followUp, followUpDate:followDate });
+  };
+
   return (
     <div style={{display:"flex",flexDirection:"column",gap:"24px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
         <div><h1 style={{fontSize:"24px",fontWeight:800,color:"#0f172a"}}>Enquiries</h1>
           <p style={{fontSize:"13px",color:"#94a3b8",marginTop:"2px"}}>Track leads and convert to students</p></div>
-        <button onClick={()=>setShowAdd(true)}
+        <button onClick={()=>{ setErrors({}); setShowAdd(true); }}
           style={{padding:"10px 20px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"10px",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>
           + New Enquiry
         </button>
@@ -144,8 +162,10 @@ export default function Enquiries() {
             <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
               {[["Name *","name","text","Student name"],["Phone *","phone","tel","9876543210"],["Email","email","email","optional"]].map(([label,key,type,ph])=>(
                 <div key={key}><label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>{label}</label>
-                  <input type={type} value={form[key]} onChange={e=>setForm({...form,[key]:e.target.value})} placeholder={ph}
-                    style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} /></div>
+                  <input type={type} value={form[key]} onChange={e=>{setForm({...form,[key]:e.target.value}); if(errors[key]) setErrors({...errors,[key]:""});}} placeholder={ph}
+                    style={{width:"100%",padding:"10px 14px",border:errors[key]?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                  {errors[key] && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors[key]}</p>}
+                </div>
               ))}
               <div><label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>INTERESTED IN</label>
                 <input value={form.interestedIn} onChange={e=>setForm({...form,interestedIn:e.target.value})} placeholder="Class 10 - Morning batch"
@@ -169,7 +189,7 @@ export default function Enquiries() {
             </div>
             <div style={{display:"flex",gap:"12px",marginTop:"24px"}}>
               <button onClick={()=>setShowAdd(false)} style={{flex:1,padding:"11px",border:"1.5px solid #e2e8f0",borderRadius:"10px",cursor:"pointer",background:"#fff",color:"#64748b",fontWeight:600}}>Cancel</button>
-              <button onClick={()=>addEnq.mutate(form)} disabled={addEnq.isPending}
+              <button onClick={handleAddEnquiry} disabled={addEnq.isPending}
                 style={{flex:1,padding:"11px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"10px",cursor:"pointer",fontWeight:700}}>
                 {addEnq.isPending?"Saving...":"Save Enquiry"}
               </button>

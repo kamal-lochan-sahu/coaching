@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { isPositiveNumber } from "../../utils/validation";
 
 const MODE_COLORS = { cash:"#16a34a", upi:"#7c3aed", cheque:"#d97706", online:"#0891b2" };
 
@@ -16,6 +17,7 @@ export default function Fees() {
   const [form, setForm] = useState({ amount:"", discount:"0", paymentMode:"cash", month:new Date().toISOString().slice(0,7), note:"" });
   const [lastReceipt, setLastReceipt] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
+  const [amountError, setAmountError] = useState("");
 
   const downloadReceipt = async (feeId, receiptNumber) => {
     setDownloadingId(feeId);
@@ -79,8 +81,14 @@ export default function Fees() {
   });
 
   const handleCollect = () => {
-    if (!found)       return toast.error("Search student first");
-    if (!form.amount) return toast.error("Enter amount");
+    if (!found) return toast.error("Search student first");
+    const amtError = isPositiveNumber(form.amount) || (!form.amount ? "Amount is required" : "");
+    if (amtError) { setAmountError(amtError); return toast.error(amtError); }
+    if (Number(form.discount||0) > Number(form.amount)) {
+      setAmountError("Discount cannot be greater than amount");
+      return toast.error("Discount cannot be greater than amount");
+    }
+    setAmountError("");
     collect.mutate({
       studentId:   found._id,
       batchId:     found.currentBatch?._id||found.currentBatch,
@@ -188,8 +196,9 @@ export default function Fees() {
             <div style={{display:"flex",flexDirection:"column",gap:"14px"}}>
               <div>
                 <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>AMOUNT *</label>
-                <input type="number" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})} placeholder="0"
-                  style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                <input type="number" value={form.amount} onChange={e=>{setForm({...form,amount:e.target.value}); if(amountError) setAmountError("");}} placeholder="0"
+                  style={{width:"100%",padding:"10px 14px",border:amountError?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                {amountError && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{amountError}</p>}
               </div>
               <div>
                 <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>DISCOUNT</label>

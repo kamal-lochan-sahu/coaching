@@ -4,12 +4,21 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 import { ArrowLeft } from "lucide-react";
+import { validateForm, isRequired, isEmail, isPhone } from "../../utils/validation";
+
+const RULES = {
+  name:          [isRequired],
+  phone:         [isPhone],
+  email:         [isEmail],
+  guardianPhone: [isPhone],
+};
 
 export default function EditStudent() {
   const { id } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [form, setForm] = useState(null);
+  const [errors, setErrors] = useState({});
 
   const { data: studentData } = useQuery({
     queryKey: ["student", id],
@@ -51,7 +60,18 @@ export default function EditStudent() {
 
   if (!form) return <div style={{padding:"40px",textAlign:"center",color:"#94a3b8"}}>Loading...</div>;
 
-  const f = (key) => ({ value: form[key], onChange: e => setForm({...form, [key]: e.target.value}) });
+  const f = (key) => ({ value: form[key], onChange: e => { setForm({...form, [key]: e.target.value}); if (errors[key]) setErrors({...errors, [key]: ""}); } });
+
+  const handleSubmit = () => {
+    const newErrors = validateForm(form, RULES);
+    if (Object.keys(newErrors).length) {
+      setErrors(newErrors);
+      toast.error("Please fix the highlighted fields");
+      return;
+    }
+    setErrors({});
+    mutation.mutate(form);
+  };
 
   return (
     <div style={{maxWidth:"680px",margin:"0 auto",display:"flex",flexDirection:"column",gap:"24px"}}>
@@ -72,7 +92,8 @@ export default function EditStudent() {
             <div key={key}>
               <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>{label}</label>
               <input type={type} {...f(key)}
-                style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+                style={{width:"100%",padding:"10px 14px",border:errors[key]?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+              {errors[key] && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors[key]}</p>}
             </div>
           ))}
           <div>
@@ -101,7 +122,8 @@ export default function EditStudent() {
           </div>
           <div>
             <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>Guardian Phone</label>
-            <input type="tel" {...f("guardianPhone")} style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+            <input type="tel" {...f("guardianPhone")} style={{width:"100%",padding:"10px 14px",border:errors.guardianPhone?"1.5px solid #dc2626":"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none",boxSizing:"border-box"}} />
+            {errors.guardianPhone && <p style={{color:"#dc2626",fontSize:"11px",marginTop:"4px",fontWeight:500}}>{errors.guardianPhone}</p>}
           </div>
           <div>
             <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>Relation</label>
@@ -138,7 +160,7 @@ export default function EditStudent() {
           <Link to={`/students/${id}`} style={{flex:1,padding:"12px",border:"1.5px solid #e2e8f0",borderRadius:"10px",textAlign:"center",color:"#64748b",fontWeight:600,textDecoration:"none",fontSize:"14px"}}>
             Cancel
           </Link>
-          <button onClick={() => mutation.mutate(form)} disabled={!form.name || mutation.isPending}
+          <button onClick={handleSubmit} disabled={mutation.isPending}
             style={{flex:1,padding:"12px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"10px",fontWeight:700,cursor:"pointer",fontSize:"14px"}}>
             {mutation.isPending ? "Saving..." : "Save Changes"}
           </button>
