@@ -3,15 +3,32 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import { GraduationCap } from "lucide-react";
 import toast from "react-hot-toast";
+import { validateForm, isRequired, isEmail, isPhone, minLength } from "../../utils/validation";
+
+const RULES = {
+  instituteName: [isRequired],
+  name:          [isRequired],
+  email:         [isRequired, isEmail],
+  phone:         [isRequired, isPhone],
+  password:      [isRequired, minLength(8)],
+};
 
 export default function Register() {
   const [form, setForm] = useState({ name:"", email:"", phone:"", password:"", instituteName:"" });
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const { register } = useAuthStore();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const newErrors = validateForm(form, RULES);
+    if (Object.keys(newErrors).length) {
+      setErrors(newErrors);
+      toast.error("Please fix the highlighted fields");
+      return;
+    }
+    setErrors({});
     setLoading(true);
     try {
       await register(form);
@@ -24,7 +41,7 @@ export default function Register() {
     }
   };
 
-  const f = (key) => ({ value: form[key], onChange: e => setForm({...form, [key]: e.target.value}) });
+  const f = (key) => ({ value: form[key], onChange: e => { setForm({...form, [key]: e.target.value}); if (errors[key]) setErrors({...errors, [key]: ""}); } });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -39,7 +56,7 @@ export default function Register() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="space-y-4">
           {[
             { label:"Institute Name", key:"instituteName", type:"text", placeholder:"Kamal Coaching Center" },
             { label:"Your Name",      key:"name",          type:"text", placeholder:"Kamal" },
@@ -50,9 +67,10 @@ export default function Register() {
             <div key={key}>
               <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
               <input
-                type={type} required {...f(key)} placeholder={placeholder}
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                type={type} {...f(key)} placeholder={placeholder}
+                className={`w-full px-4 py-2.5 border rounded-lg focus:outline-none focus:ring-2 text-sm ${errors[key] ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`}
               />
+              {errors[key] && <p className="text-xs text-red-500 mt-1">{errors[key]}</p>}
             </div>
           ))}
           <button

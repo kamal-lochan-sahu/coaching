@@ -3,6 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import { validateForm, isRequired, isEmail, isPhone } from "../../utils/validation";
+
+const RULES = {
+  name:          [isRequired],
+  branchId:      [isRequired],
+  phone:         [isPhone],
+  email:         [isEmail],
+  guardianPhone: [isPhone],
+};
 
 export default function AddStudent() {
   const navigate = useNavigate();
@@ -12,6 +21,7 @@ export default function AddStudent() {
     guardianName:"", guardianPhone:"", guardianRelation:"father",
     branchId:"", batchId:"",
   });
+  const [errors, setErrors] = useState({});
 
   const { data: branches } = useQuery({ queryKey:["branches"], queryFn: () => api.get("/branches").then(r=>r.data.data) });
   const { data: batches }  = useQuery({ queryKey:["batches"],  queryFn: () => api.get("/batches").then(r=>r.data.data) });
@@ -26,7 +36,18 @@ export default function AddStudent() {
     onError: (err) => toast.error(err.response?.data?.message || "Failed"),
   });
 
-  const f = (key) => ({ value: form[key], onChange: e => setForm({...form, [key]: e.target.value}) });
+  const f = (key) => ({ value: form[key], onChange: e => { setForm({...form, [key]: e.target.value}); if (errors[key]) setErrors({...errors, [key]: ""}); } });
+
+  const handleSubmit = () => {
+    const newErrors = validateForm(form, RULES);
+    if (Object.keys(newErrors).length) {
+      setErrors(newErrors);
+      toast.error("Please fix the highlighted fields");
+      return;
+    }
+    setErrors({});
+    mutation.mutate(form);
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -47,7 +68,8 @@ export default function AddStudent() {
             <div key={key}>
               <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
               <input type={type} {...f(key)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className={`w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 ${errors[key] ? "border-red-400 focus:ring-red-400" : "border-gray-200 focus:ring-blue-500"}`} />
+              {errors[key] && <p className="text-xs text-red-500 mt-1">{errors[key]}</p>}
             </div>
           ))}
           <div>
@@ -75,7 +97,8 @@ export default function AddStudent() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Guardian Phone</label>
             <input type="tel" {...f("guardianPhone")}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              className={`w-full px-3 py-2 border rounded-lg text-sm ${errors.guardianPhone ? "border-red-400" : "border-gray-200"}`} />
+            {errors.guardianPhone && <p className="text-xs text-red-500 mt-1">{errors.guardianPhone}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Relation</label>
@@ -91,10 +114,11 @@ export default function AddStudent() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Branch*</label>
-            <select {...f("branchId")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+            <select {...f("branchId")} className={`w-full px-3 py-2 border rounded-lg text-sm ${errors.branchId ? "border-red-400" : "border-gray-200"}`}>
               <option value="">Select Branch</option>
               {branches?.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
             </select>
+            {errors.branchId && <p className="text-xs text-red-500 mt-1">{errors.branchId}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Batch</label>
@@ -120,8 +144,8 @@ export default function AddStudent() {
             className="px-5 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50"
           >Cancel</button>
           <button
-            onClick={() => mutation.mutate(form)}
-            disabled={!form.name || !form.branchId || mutation.isPending}
+            onClick={handleSubmit}
+            disabled={mutation.isPending}
             className="px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium disabled:opacity-60"
           >
             {mutation.isPending ? "Saving..." : "Add Student"}
