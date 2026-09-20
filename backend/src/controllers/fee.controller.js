@@ -22,7 +22,7 @@ export const getFees = asyncHandler(async (req, res) => {
       .skip(skip).limit(Number(limit)),
     Fee.countDocuments(filter),
   ]);
-  return res.json(new ApiResponse(200, { fees, total }));
+  return res.json(new ApiResponse(200, { fees, total, page: Number(page), pages: Math.ceil(total / Number(limit)) }));
 });
 
 export const collectFee = asyncHandler(async (req, res) => {

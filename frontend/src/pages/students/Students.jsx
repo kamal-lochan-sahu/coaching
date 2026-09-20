@@ -6,17 +6,22 @@ import api from "../../services/api";
 import Badge from "../../components/ui/Badge";
 import Loader from "../../components/ui/Loader";
 import EmptyState from "../../components/ui/EmptyState";
+import Pagination from "../../components/ui/Pagination";
 import { useDebounce } from "../../hooks/useDebounce";
+
+const PAGE_SIZE = 20;
 
 export default function Students() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("active");
+  const [page,   setPage]   = useState(1);
   const debouncedSearch = useDebounce(search, 400);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["students", status],
-    queryFn:  () => api.get(`/students?status=${status}&limit=100`).then(r => r.data.data),
+    queryKey: ["students", status, page],
+    queryFn:  () => api.get(`/students?status=${status}&page=${page}&limit=${PAGE_SIZE}`).then(r => r.data.data),
     staleTime: 30000,
+    keepPreviousData: true,
   });
 
   const { data: searchResults=[], isFetching: searching } = useQuery({
@@ -26,8 +31,11 @@ export default function Students() {
     staleTime: 10000,
   });
 
+  const handleStatusChange = (s) => { setStatus(s); setPage(1); };
+
   const students = data?.students || [];
-  const filtered = debouncedSearch.length >= 2 ? searchResults : students;
+  const isSearching = debouncedSearch.length >= 2;
+  const filtered = isSearching ? searchResults : students;
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:"20px"}}>
@@ -58,7 +66,7 @@ export default function Students() {
             <div style={{position:"absolute",right:"12px",top:"50%",transform:"translateY(-50%)",width:"14px",height:"14px",border:"2px solid #e2e8f0",borderTopColor:"#1a56db",borderRadius:"50%",animation:"spin 0.7s linear infinite"}} />
           )}
         </div>
-        <select value={status} onChange={e => setStatus(e.target.value)}
+        <select value={status} onChange={e => handleStatusChange(e.target.value)}
           style={{padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
@@ -108,6 +116,9 @@ export default function Students() {
               ))}
             </tbody>
           </table>
+          {!isSearching && (
+            <Pagination page={data?.page || page} pages={data?.pages || 1} total={data?.total} onPageChange={setPage} />
+          )}
         </div>
       )}
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

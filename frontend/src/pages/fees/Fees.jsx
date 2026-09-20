@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 import { isPositiveNumber } from "../../utils/validation";
+import Pagination from "../../components/ui/Pagination";
 
 const MODE_COLORS = { cash:"#16a34a", upi:"#7c3aed", cheque:"#d97706", online:"#0891b2" };
 
@@ -18,6 +19,8 @@ export default function Fees() {
   const [lastReceipt, setLastReceipt] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
   const [amountError, setAmountError] = useState("");
+  const [allFeesPage,   setAllFeesPage]   = useState(1);
+  const [allFeesStatus, setAllFeesStatus] = useState("");
 
   const downloadReceipt = async (feeId, receiptNumber) => {
     setDownloadingId(feeId);
@@ -42,6 +45,12 @@ export default function Fees() {
   const { data:feeReport   } = useQuery({ queryKey:["fee-report"],   queryFn:()=>api.get(`/fees/report?month=${new Date().toISOString().slice(0,7)}`).then(r=>r.data.data) });
   const { data:branches=[] } = useQuery({ queryKey:["branches"],     queryFn:()=>api.get("/branches").then(r=>r.data.data) });
   const { data:batches=[]  } = useQuery({ queryKey:["batches"],      queryFn:()=>api.get("/batches").then(r=>r.data.data) });
+  const { data:allFeesData, isLoading:allFeesLoading } = useQuery({
+    queryKey:["all-fees",allFeesPage,allFeesStatus],
+    queryFn:()=>api.get(`/fees?page=${allFeesPage}&limit=15${allFeesStatus?`&status=${allFeesStatus}`:""}`).then(r=>r.data.data),
+    enabled: tab==="all",
+    keepPreviousData: true,
+  });
 
   const searchStudent = async () => {
     if (!search.trim()) return;
@@ -105,6 +114,7 @@ export default function Fees() {
     {id:"collect", label:"💰 Collect Fee"},
     {id:"pending", label:`⚠️ Pending (${pending.length})`},
     {id:"generate",label:"⚡ Generate Fees"},
+    {id:"all",     label:"📄 All Fees"},
     {id:"report",  label:"📊 Report"},
   ];
 
@@ -319,6 +329,64 @@ export default function Fees() {
               {generateFees.isPending?"Generating...":"⚡ Generate Fee Records"}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* All Fees Tab */}
+      {tab==="all"&&(
+        <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",overflow:"hidden"}}>
+          <div style={{padding:"16px 20px",borderBottom:"1px solid #f8fafc",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"10px"}}>
+            <p style={{fontWeight:700,color:"#0f172a"}}>All Fee Records</p>
+            <select value={allFeesStatus} onChange={e=>{setAllFeesStatus(e.target.value); setAllFeesPage(1);}}
+              style={{padding:"7px 12px",border:"1.5px solid #e2e8f0",borderRadius:"8px",fontSize:"12px",outline:"none"}}>
+              <option value="">All statuses</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="waived">Waived</option>
+            </select>
+          </div>
+          {allFeesLoading?(
+            <div style={{padding:"40px",textAlign:"center",color:"#94a3b8"}}>Loading...</div>
+          ):!allFeesData?.fees?.length?(
+            <div style={{padding:"60px",textAlign:"center",color:"#94a3b8"}}>No fee records found</div>
+          ):(
+            <>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:"13px"}}>
+                <thead><tr style={{background:"#f8fafc"}}>
+                  {["Student","Batch","Month","Amount","Status","Receipt"].map(h=>(
+                    <th key={h} style={{textAlign:"left",padding:"12px 16px",color:"#64748b",fontWeight:600,fontSize:"12px"}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {allFeesData.fees.map((f,i)=>(
+                    <tr key={f._id} style={{borderTop:"1px solid #f8fafc",background:i%2===0?"#fff":"#fafafa"}}>
+                      <td style={{padding:"12px 16px",fontWeight:600,color:"#0f172a"}}>{f.studentId?.name||"—"}</td>
+                      <td style={{padding:"12px 16px",color:"#64748b"}}>{f.batchId?.name||"—"}</td>
+                      <td style={{padding:"12px 16px",color:"#64748b"}}>{f.month}</td>
+                      <td style={{padding:"12px 16px",fontWeight:700}}>₹{f.finalAmount?.toLocaleString()}</td>
+                      <td style={{padding:"12px 16px"}}>
+                        <span style={{padding:"3px 8px",borderRadius:"99px",fontSize:"11px",fontWeight:600,
+                          background:f.status==="paid"?"#f0fdf4":f.status==="pending"?"#fffbeb":"#f5f3ff",
+                          color:f.status==="paid"?"#16a34a":f.status==="pending"?"#d97706":"#7c3aed",
+                          textTransform:"capitalize"}}>
+                          {f.status}
+                        </span>
+                      </td>
+                      <td style={{padding:"12px 16px"}}>
+                        {f.status==="paid"?(
+                          <button onClick={()=>downloadReceipt(f._id, f.receiptNumber)} disabled={downloadingId===f._id}
+                            style={{padding:"5px 10px",background:"#eff6ff",color:"#1a56db",border:"none",borderRadius:"7px",cursor:"pointer",fontSize:"11px",fontWeight:600}}>
+                            {downloadingId===f._id?"...":"⬇️ PDF"}
+                          </button>
+                        ):"—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <Pagination page={allFeesData.page||allFeesPage} pages={allFeesData.pages||1} total={allFeesData.total} onPageChange={setAllFeesPage} />
+            </>
+          )}
         </div>
       )}
 
