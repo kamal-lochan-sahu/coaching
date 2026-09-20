@@ -4,9 +4,9 @@ import { Plus, Search, Users } from "lucide-react";
 import { useState } from "react";
 import api from "../../services/api";
 import Badge from "../../components/ui/Badge";
-import Loader from "../../components/ui/Loader";
 import EmptyState from "../../components/ui/EmptyState";
 import Pagination from "../../components/ui/Pagination";
+import TableSkeleton from "../../components/ui/TableSkeleton";
 import { useDebounce } from "../../hooks/useDebounce";
 
 const PAGE_SIZE = 20;
@@ -76,7 +76,7 @@ export default function Students() {
       </div>
 
       {/* Table */}
-      {isLoading && !search ? <Loader /> : filtered.length === 0 ? (
+      {isLoading && !search ? <TableSkeleton cols={5} /> : filtered.length === 0 ? (
         <EmptyState icon={Users}
           title={search ? `No students found for "${search}"` : "No students yet"}
           description={search ? "Try a different search term" : "Add your first student to get started"}

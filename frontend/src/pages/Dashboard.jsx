@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import api from "../services/api";
-import Loader from "../components/ui/Loader";
+import DashboardSkeleton from "../components/ui/DashboardSkeleton";
 import { useAuthStore } from "../store/authStore";
 import { useState, useEffect } from "react";
 
@@ -39,7 +39,7 @@ export default function Dashboard() {
   const { data, isLoading } = useQuery({ queryKey:["dashboard"], queryFn:()=>api.get("/analytics/dashboard").then(r=>r.data.data) });
   const { data:chart=[]  } = useQuery({ queryKey:["revenue-chart"], queryFn:()=>api.get("/analytics/revenue").then(r=>r.data.data) });
 
-  if (isLoading) return <Loader text="Loading dashboard..." />;
+  if (isLoading) return <DashboardSkeleton />;
   const d = data || {};
   const attPct    = d.attendance?.today?.percentage || 0;
   const attColor  = attPct>=80?"#16a34a":attPct>=60?"#f59e0b":"#ef4444";

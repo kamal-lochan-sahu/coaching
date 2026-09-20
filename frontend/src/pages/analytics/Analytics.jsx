@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import api from "../../services/api";
-import Loader from "../../components/ui/Loader";
+import AnalyticsSkeleton from "../../components/ui/AnalyticsSkeleton";
 
 const COLORS = ["#1a56db","#16a34a","#d97706","#dc2626","#7c3aed","#0891b2","#db2777","#64748b"];
 
@@ -16,9 +16,11 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Analytics() {
-  const { data:dashboard } = useQuery({ queryKey:["dashboard"],    queryFn:()=>api.get("/analytics/dashboard").then(r=>r.data.data) });
-  const { data:revenue=[]}  = useQuery({ queryKey:["revenue-chart"],queryFn:()=>api.get("/analytics/revenue").then(r=>r.data.data) });
-  const { data:enqData=[]}  = useQuery({ queryKey:["enq-conversion"],queryFn:()=>api.get("/analytics/enquiry-conversion").then(r=>r.data.data) });
+  const { data:dashboard, isLoading:l1 } = useQuery({ queryKey:["dashboard"],    queryFn:()=>api.get("/analytics/dashboard").then(r=>r.data.data) });
+  const { data:revenue=[], isLoading:l2 }  = useQuery({ queryKey:["revenue-chart"],queryFn:()=>api.get("/analytics/revenue").then(r=>r.data.data) });
+  const { data:enqData=[], isLoading:l3 }  = useQuery({ queryKey:["enq-conversion"],queryFn:()=>api.get("/analytics/enquiry-conversion").then(r=>r.data.data) });
+
+  if (l1 || l2 || l3) return <AnalyticsSkeleton />;
 
   const d = dashboard||{};
   const enqStats = enqData?.stats||[];

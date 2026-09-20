@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Edit, Camera } from "lucide-react";
 import api from "../../services/api";
-import Loader from "../../components/ui/Loader";
+import DetailSkeleton from "../../components/ui/DetailSkeleton";
 import toast from "react-hot-toast";
 
 const GRADE_COLOR = { "A+":"#16a34a","A":"#16a34a","B+":"#0891b2","B":"#0891b2","C":"#d97706","D":"#d97706","F":"#dc2626" };
@@ -41,7 +41,7 @@ export default function StudentDetail() {
     e.target.value = "";
   };
 
-  if (isLoading) return <Loader />;
+  if (isLoading) return <DetailSkeleton />;
   const { student, attendance=[], fees=[], results=[] } = history || {};
   if (!student) return <div style={{padding:"40px",textAlign:"center",color:"#94a3b8"}}>Student not found</div>;
 
