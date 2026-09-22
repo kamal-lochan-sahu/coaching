@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { getStudents, searchStudents, createStudent, getStudent, updateStudent, deleteStudent, getStudentAttendance, getStudentFees, getStudentResults, getStudentHistory, transferStudent } from "../controllers/student.controller.js";
+import { getStudents, searchStudents, createStudent, getStudent, updateStudent, deleteStudent, getStudentAttendance, getStudentFees, getStudentResults, getStudentHistory, transferStudent, exportStudentsCSV } from "../controllers/student.controller.js";
 import { protect, adminAndAbove, teacherAndAbove, allRoles } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import { createStudentSchema, updateStudentSchema, transferStudentSchema } from "../validators/schemas.js";
 const router = Router();
 router.use(protect);
-router.get("/search", searchStudents);
+router.get("/search",       searchStudents);
+router.get("/export/csv",   allRoles, exportStudentsCSV);
 router.get("/",       allRoles, getStudents);
 router.post("/",      adminAndAbove, validate(createStudentSchema), createStudent);
 router.get("/:id",            allRoles, getStudent);

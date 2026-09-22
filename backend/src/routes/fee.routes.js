@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   getFees, collectFee, getPendingFees, getStudentFees,
-  waiveFee, getFeeReport, generateFeeForBatch, downloadFeeReceipt
+  waiveFee, getFeeReport, generateFeeForBatch, downloadFeeReceipt, exportFeesCSV
 } from "../controllers/fee.controller.js";
 import { protect, adminAndAbove, allRoles } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
@@ -11,6 +11,7 @@ const router = Router();
 router.use(protect);
 
 router.get("/",                  allRoles,       getFees);
+router.get("/export/csv",        allRoles,       exportFeesCSV);
 router.post("/collect",          allRoles,       validate(collectFeeSchema), collectFee);
 router.get("/pending",           allRoles,       getPendingFees);
 router.get("/report",            allRoles,       getFeeReport);

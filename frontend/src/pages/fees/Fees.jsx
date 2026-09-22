@@ -20,6 +20,27 @@ export default function Fees() {
   const [lastReceipt, setLastReceipt] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
   const [printFee, setPrintFee] = useState(null);
+  const [exportingCSV, setExportingCSV] = useState(false);
+
+  const handleExportFeesCSV = async () => {
+    setExportingCSV(true);
+    try {
+      const month = new Date().toISOString().slice(0,7);
+      const res = await api.get(`/fees/export/csv?month=${month}&status=paid`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `fees-${month}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to export fees");
+    } finally {
+      setExportingCSV(false);
+    }
+  };
   const [amountError, setAmountError] = useState("");
   const [allFeesPage,   setAllFeesPage]   = useState(1);
   const [allFeesStatus, setAllFeesStatus] = useState("");
@@ -405,7 +426,13 @@ export default function Fees() {
       {/* Report Tab */}
       {tab==="report"&&(
         <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"24px"}}>
-          <h3 style={{fontWeight:700,color:"#0f172a",marginBottom:"16px"}}>This Month Summary</h3>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"16px"}}>
+            <h3 style={{fontWeight:700,color:"#0f172a"}}>This Month Summary</h3>
+            <button onClick={handleExportFeesCSV} disabled={exportingCSV}
+              style={{display:"flex",alignItems:"center",gap:"6px",padding:"8px 14px",background:"#fff",color:"#64748b",border:"1.5px solid #e2e8f0",borderRadius:"9px",fontSize:"12px",fontWeight:600,cursor:"pointer"}}>
+              ⬇️ {exportingCSV?"Exporting...":"Export CSV"}
+            </button>
+          </div>
           {feeReport?.byPaymentMode&&Object.keys(feeReport.byPaymentMode).length>0?(
             <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"12px",marginBottom:"20px"}}>
               {Object.entries(feeReport.byPaymentMode).map(([mode,amt])=>(

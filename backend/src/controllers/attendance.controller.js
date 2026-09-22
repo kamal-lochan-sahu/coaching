@@ -2,6 +2,7 @@ import { Attendance } from "../models/Academic.js";
 import Student from "../models/Student.js";
 import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
 import { invalidateDashboardCache } from "../config/redis.js";
+import { sendCSV } from "../utils/csv.utils.js";
 
 export const markAttendance = asyncHandler(async (req, res) => {
   const { batchId, branchId, date, records } = req.body;
@@ -69,6 +70,44 @@ export const getAttendanceReport = asyncHandler(async (req, res) => {
   }));
 
   return res.json(new ApiResponse(200, report));
+});
+
+// GET /api/attendance/export/csv?batchId=&month=YYYY-MM — same report data as above, as CSV
+export const exportAttendanceCSV = asyncHandler(async (req, res) => {
+  const { batchId, month } = req.query;
+  if (!batchId || !month) throw new ApiError(400, "batchId and month required");
+
+  const [year, m] = month.split("-");
+  const start = new Date(year, m - 1, 1);
+  const end   = new Date(year, m, 0);
+
+  const records = await Attendance.find({ batchId, date: { $gte: start, $lte: end } })
+    .populate("studentId", "name phone");
+
+  const map = {};
+  for (const r of records) {
+    const sid = r.studentId._id.toString();
+    if (!map[sid]) map[sid] = { student: r.studentId, present: 0, absent: 0, late: 0, total: 0 };
+    map[sid].total++;
+    if (r.status === "present") map[sid].present++;
+    else if (r.status === "absent") map[sid].absent++;
+    else if (r.status === "late") map[sid].late++;
+  }
+
+  const report = Object.values(map).map(s => ({
+    ...s,
+    percentage: Math.round(((s.present + s.late) / s.total) * 100),
+  }));
+
+  return sendCSV(res, `attendance-${month}.csv`, report, [
+    { label: "Student", get: (r) => r.student?.name || "" },
+    { label: "Phone", get: (r) => r.student?.phone || "" },
+    { label: "Present", key: "present" },
+    { label: "Absent", key: "absent" },
+    { label: "Late", key: "late" },
+    { label: "Total Days", key: "total" },
+    { label: "Percentage", get: (r) => `${r.percentage}%` },
+  ]);
 });
 
 export const getLowAttendance = asyncHandler(async (req, res) => {

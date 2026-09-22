@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Plus, Search, Users } from "lucide-react";
+import { Plus, Search, Users, Download } from "lucide-react";
 import { useState } from "react";
 import api from "../../services/api";
 import Badge from "../../components/ui/Badge";
@@ -8,6 +8,7 @@ import EmptyState from "../../components/ui/EmptyState";
 import Pagination from "../../components/ui/Pagination";
 import TableSkeleton from "../../components/ui/TableSkeleton";
 import { useDebounce } from "../../hooks/useDebounce";
+import toast from "react-hot-toast";
 
 const PAGE_SIZE = 20;
 
@@ -15,6 +16,7 @@ export default function Students() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("active");
   const [page,   setPage]   = useState(1);
+  const [exporting, setExporting] = useState(false);
   const debouncedSearch = useDebounce(search, 400);
 
   const { data, isLoading } = useQuery({
@@ -33,6 +35,25 @@ export default function Students() {
 
   const handleStatusChange = (s) => { setStatus(s); setPage(1); };
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const res = await api.get(`/students/export/csv?status=${status}`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `students-${status}-${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to export students");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const students = data?.students || [];
   const isSearching = debouncedSearch.length >= 2;
   const filtered = isSearching ? searchResults : students;
@@ -46,10 +67,16 @@ export default function Students() {
             {debouncedSearch.length >= 2 ? `${filtered.length} results for "${debouncedSearch}"` : `${data?.total || 0} total students`}
           </p>
         </div>
-        <Link to="/students/add"
-          style={{display:"flex",alignItems:"center",gap:"6px",padding:"10px 18px",background:"#1a56db",color:"#fff",borderRadius:"10px",textDecoration:"none",fontSize:"13px",fontWeight:600}}>
-          <Plus size={16} /> Add Student
-        </Link>
+        <div style={{display:"flex",gap:"10px"}}>
+          <button onClick={handleExport} disabled={exporting}
+            style={{display:"flex",alignItems:"center",gap:"6px",padding:"10px 16px",background:"#fff",color:"#64748b",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>
+            <Download size={15} /> {exporting?"Exporting...":"Export CSV"}
+          </button>
+          <Link to="/students/add"
+            style={{display:"flex",alignItems:"center",gap:"6px",padding:"10px 18px",background:"#1a56db",color:"#fff",borderRadius:"10px",textDecoration:"none",fontSize:"13px",fontWeight:600}}>
+            <Plus size={16} /> Add Student
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { markAttendance, getBatchAttendance, getAttendanceReport, getLowAttendance } from "../controllers/attendance.controller.js";
+import { markAttendance, getBatchAttendance, getAttendanceReport, getLowAttendance, exportAttendanceCSV } from "../controllers/attendance.controller.js";
 import { protect, teacherAndAbove, allRoles } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import { markAttendanceSchema } from "../validators/schemas.js";
@@ -8,5 +8,6 @@ router.use(protect);
 router.post("/mark",                  teacherAndAbove, validate(markAttendanceSchema), markAttendance);
 router.get("/batch/:batchId",         allRoles, getBatchAttendance);
 router.get("/report",                 allRoles, getAttendanceReport);
+router.get("/export/csv",             allRoles, exportAttendanceCSV);
 router.get("/low-attendance",         allRoles, getLowAttendance);
 export default router;

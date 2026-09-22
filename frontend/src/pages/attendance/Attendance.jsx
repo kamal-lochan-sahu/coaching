@@ -11,10 +11,14 @@ const STATUS_CONFIG = {
 
 export default function Attendance() {
   const today = new Date().toISOString().slice(0,10);
+  const [tab,       setTab]       = useState("mark");
   const [batchId,   setBatchId]   = useState("");
   const [date,      setDate]      = useState(today);
   const [records,   setRecords]   = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [reportBatchId, setReportBatchId] = useState("");
+  const [reportMonth,   setReportMonth]   = useState(new Date().toISOString().slice(0,7));
+  const [exportingCSV,  setExportingCSV]  = useState(false);
 
   const { data: batches=[], isLoading: batchLoading } = useQuery({
     queryKey: ["batches"],
@@ -45,6 +49,32 @@ export default function Attendance() {
     onError:   (e) => toast.error(e.response?.data?.message || "Failed"),
   });
 
+  const { data: report=[], isLoading: reportLoading } = useQuery({
+    queryKey: ["attendance-report", reportBatchId, reportMonth],
+    queryFn:  () => api.get(`/attendance/report?batchId=${reportBatchId}&month=${reportMonth}`).then(r => r.data.data),
+    enabled:  tab==="report" && !!reportBatchId,
+  });
+
+  const handleExportCSV = async () => {
+    if (!reportBatchId) return toast.error("Select a batch first");
+    setExportingCSV(true);
+    try {
+      const res = await api.get(`/attendance/export/csv?batchId=${reportBatchId}&month=${reportMonth}`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `attendance-${reportMonth}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to export attendance");
+    } finally {
+      setExportingCSV(false);
+    }
+  };
+
   const selectedBatch = batches.find(b => b._id === batchId);
   const present = Object.values(records).filter(v => v === "present").length;
   const absent  = Object.values(records).filter(v => v === "absent").length;
@@ -73,6 +103,19 @@ export default function Attendance() {
         <p style={{fontSize:"13px",color:"#94a3b8",marginTop:"2px"}}>Mark daily attendance batch-wise</p>
       </div>
 
+      {/* Tabs */}
+      <div style={{display:"flex",gap:"4px",background:"#f1f5f9",borderRadius:"12px",padding:"4px",width:"fit-content"}}>
+        {[{id:"mark",label:"✅ Mark Attendance"},{id:"report",label:"📊 Monthly Report"}].map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)}
+            style={{padding:"8px 16px",borderRadius:"9px",border:"none",cursor:"pointer",fontSize:"13px",fontWeight:600,
+              background:tab===t.id?"#fff":"transparent",color:tab===t.id?"#0f172a":"#64748b",
+              boxShadow:tab===t.id?"0 1px 3px rgba(0,0,0,0.1)":"none"}}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab==="mark"&&(<>
       {/* Controls */}
       <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"20px",display:"flex",gap:"16px",alignItems:"flex-end",flexWrap:"wrap"}}>
         <div style={{flex:1,minWidth:"200px"}}>
@@ -182,6 +225,70 @@ export default function Attendance() {
               {mark.isPending ? "Saving..." : submitted ? "✅ Attendance Saved" : "Save Attendance"}
             </button>
           </div>
+        </div>
+      )}
+      </>)}
+
+      {tab==="report"&&(
+        <div style={{display:"flex",flexDirection:"column",gap:"16px"}}>
+          <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"20px",display:"flex",gap:"16px",alignItems:"flex-end",flexWrap:"wrap"}}>
+            <div style={{flex:1,minWidth:"200px"}}>
+              <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>BATCH</label>
+              <select value={reportBatchId} onChange={e=>setReportBatchId(e.target.value)}
+                style={{width:"100%",padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}}>
+                <option value="">Select batch...</option>
+                {batches.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{display:"block",fontSize:"12px",fontWeight:600,color:"#64748b",marginBottom:"6px"}}>MONTH</label>
+              <input type="month" value={reportMonth} onChange={e=>setReportMonth(e.target.value)}
+                style={{padding:"10px 14px",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",outline:"none"}} />
+            </div>
+            <button onClick={handleExportCSV} disabled={!reportBatchId || exportingCSV}
+              style={{padding:"10px 16px",background:"#fff",color:"#64748b",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>
+              ⬇️ {exportingCSV?"Exporting...":"Export CSV"}
+            </button>
+          </div>
+
+          {!reportBatchId ? (
+            <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"60px",textAlign:"center",color:"#94a3b8"}}>
+              📊 Select a batch to view its monthly attendance report
+            </div>
+          ) : reportLoading ? (
+            <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"40px",textAlign:"center",color:"#94a3b8"}}>
+              Loading...
+            </div>
+          ) : report.length===0 ? (
+            <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",padding:"60px",textAlign:"center",color:"#94a3b8"}}>
+              No attendance records for this batch/month
+            </div>
+          ) : (
+            <div style={{background:"#fff",borderRadius:"16px",border:"1px solid #f1f5f9",overflow:"hidden"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:"13px"}}>
+                <thead><tr style={{background:"#f8fafc"}}>
+                  {["Student","Present","Absent","Late","Total Days","%"].map(h=>(
+                    <th key={h} style={{textAlign:"left",padding:"12px 16px",color:"#64748b",fontWeight:600,fontSize:"12px"}}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {report.map((r,i)=>{
+                    const pctColor = r.percentage>=80?"#16a34a":r.percentage>=60?"#d97706":"#dc2626";
+                    return (
+                      <tr key={r.student._id} style={{borderTop:"1px solid #f8fafc",background:i%2===0?"#fff":"#fafafa"}}>
+                        <td style={{padding:"12px 16px",fontWeight:600,color:"#0f172a"}}>{r.student.name}</td>
+                        <td style={{padding:"12px 16px",color:"#16a34a"}}>{r.present}</td>
+                        <td style={{padding:"12px 16px",color:"#dc2626"}}>{r.absent}</td>
+                        <td style={{padding:"12px 16px",color:"#d97706"}}>{r.late}</td>
+                        <td style={{padding:"12px 16px",color:"#64748b"}}>{r.total}</td>
+                        <td style={{padding:"12px 16px",fontWeight:700,color:pctColor}}>{r.percentage}%</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ import Batch from "../models/Batch.js";
 import { Attendance, Fee, Result } from "../models/Academic.js";
 import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
 import { invalidateDashboardCache } from "../config/redis.js";
+import { sendCSV } from "../utils/csv.utils.js";
 
 export const getStudents = asyncHandler(async (req, res) => {
   const { branchId, batchId, status = "active", page = 1, limit = 20 } = req.query;
@@ -17,6 +18,30 @@ export const getStudents = asyncHandler(async (req, res) => {
     Student.countDocuments(filter),
   ]);
   return res.json(new ApiResponse(200, { students, total, page: Number(page), pages: Math.ceil(total / limit) }));
+});
+
+// GET /api/students/export/csv — full list (no pagination), respects the same filters
+export const exportStudentsCSV = asyncHandler(async (req, res) => {
+  const { branchId, batchId, status = "active" } = req.query;
+  const filter = { ownerId: req.ownerId };
+  if (branchId) filter.branchId = branchId;
+  if (batchId)  filter.currentBatch = batchId;
+  if (status)   filter.status = status;
+
+  const students = await Student.find(filter).populate("currentBatch", "name").sort({ createdAt: -1 });
+
+  return sendCSV(res, `students-${new Date().toISOString().slice(0,10)}.csv`, students, [
+    { label: "Admission No.", key: "admissionNumber" },
+    { label: "Name", key: "name" },
+    { label: "Phone", key: "phone" },
+    { label: "Email", key: "email" },
+    { label: "Gender", key: "gender" },
+    { label: "Batch", get: (s) => s.currentBatch?.name || "" },
+    { label: "Guardian Name", key: "guardianName" },
+    { label: "Guardian Phone", key: "guardianPhone" },
+    { label: "Status", key: "status" },
+    { label: "Admitted On", get: (s) => s.createdAt ? new Date(s.createdAt).toLocaleDateString("en-IN") : "" },
+  ]);
 });
 
 export const searchStudents = asyncHandler(async (req, res) => {

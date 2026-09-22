@@ -5,6 +5,7 @@ import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
 import { generateReceiptNumber } from "../utils/receiptNumber.utils.js";
 import { invalidateDashboardCache, invalidateRevenueCache } from "../config/redis.js";
 import { generateFeeReceiptPDF } from "../services/report.service.js";
+import { sendCSV } from "../utils/csv.utils.js";
 
 export const getFees = asyncHandler(async (req, res) => {
   const { branchId, month, status, page = 1, limit = 20 } = req.query;
@@ -130,6 +131,30 @@ export const getFeeReport = asyncHandler(async (req, res) => {
   }, {});
 
   return res.json(new ApiResponse(200, { fees, totalCollected: total, byPaymentMode: byMode }));
+});
+
+// GET /api/fees/export/csv?month=YYYY-MM&status=paid
+export const exportFeesCSV = asyncHandler(async (req, res) => {
+  const { month, status } = req.query;
+  const filter = { ownerId: req.ownerId };
+  if (month)  filter.month  = month;
+  if (status) filter.status = status;
+
+  const fees = await Fee.find(filter).populate("studentId", "name phone").populate("batchId", "name").sort({ createdAt: -1 });
+
+  return sendCSV(res, `fees-${month || "all"}.csv`, fees, [
+    { label: "Receipt No.", key: "receiptNumber" },
+    { label: "Student", get: (f) => f.studentId?.name || "" },
+    { label: "Phone", get: (f) => f.studentId?.phone || "" },
+    { label: "Batch", get: (f) => f.batchId?.name || "" },
+    { label: "Month", key: "month" },
+    { label: "Amount", key: "amount" },
+    { label: "Discount", key: "discount" },
+    { label: "Final Amount", key: "finalAmount" },
+    { label: "Payment Mode", key: "paymentMode" },
+    { label: "Status", key: "status" },
+    { label: "Paid Date", get: (f) => f.paidDate ? new Date(f.paidDate).toLocaleDateString("en-IN") : "" },
+  ]);
 });
 
 export const generateFeeForBatch = asyncHandler(async (req, res) => {
