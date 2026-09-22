@@ -24,5 +24,12 @@ body {
   100% { background-position: 0% 50%; }
 }
 
+/* Receipt printing -- hide everything except the receipt on Ctrl+P */
+@media print {
+  body * { visibility: hidden; }
+  #receipt-print-area, #receipt-print-area * { visibility: visible; }
+  #receipt-print-area { position: fixed; top: 0; left: 0; width: 100%; padding: 20px; }
+}
+
 /* Safe area for PWA */
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }

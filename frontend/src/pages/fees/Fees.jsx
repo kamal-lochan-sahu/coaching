@@ -4,6 +4,7 @@ import api from "../../services/api";
 import toast from "react-hot-toast";
 import { isPositiveNumber } from "../../utils/validation";
 import Pagination from "../../components/ui/Pagination";
+import ReceiptPrintModal from "../../components/ui/ReceiptPrintModal";
 
 const MODE_COLORS = { cash:"#16a34a", upi:"#7c3aed", cheque:"#d97706", online:"#0891b2" };
 
@@ -18,6 +19,7 @@ export default function Fees() {
   const [form, setForm] = useState({ amount:"", discount:"0", paymentMode:"cash", month:new Date().toISOString().slice(0,7), note:"" });
   const [lastReceipt, setLastReceipt] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
+  const [printFee, setPrintFee] = useState(null);
   const [amountError, setAmountError] = useState("");
   const [allFeesPage,   setAllFeesPage]   = useState(1);
   const [allFeesStatus, setAllFeesStatus] = useState("");
@@ -160,6 +162,10 @@ export default function Fees() {
             ✅ Receipt <strong>{lastReceipt.receiptNumber}</strong> for {lastReceipt.studentId?.name} is ready
           </p>
           <div style={{display:"flex",gap:"8px"}}>
+            <button onClick={()=>setPrintFee(lastReceipt)}
+              style={{padding:"7px 14px",background:"#fff",color:"#15803d",border:"1.5px solid #bbf7d0",borderRadius:"8px",cursor:"pointer",fontSize:"12px",fontWeight:700}}>
+              🖨️ Print
+            </button>
             <button onClick={()=>downloadReceipt(lastReceipt._id, lastReceipt.receiptNumber)} disabled={downloadingId===lastReceipt._id}
               style={{padding:"7px 14px",background:"#16a34a",color:"#fff",border:"none",borderRadius:"8px",cursor:"pointer",fontSize:"12px",fontWeight:700}}>
               {downloadingId===lastReceipt._id?"Downloading...":"⬇️ Download PDF"}
@@ -374,10 +380,16 @@ export default function Fees() {
                       </td>
                       <td style={{padding:"12px 16px"}}>
                         {f.status==="paid"?(
-                          <button onClick={()=>downloadReceipt(f._id, f.receiptNumber)} disabled={downloadingId===f._id}
-                            style={{padding:"5px 10px",background:"#eff6ff",color:"#1a56db",border:"none",borderRadius:"7px",cursor:"pointer",fontSize:"11px",fontWeight:600}}>
-                            {downloadingId===f._id?"...":"⬇️ PDF"}
-                          </button>
+                          <div style={{display:"flex",gap:"6px"}}>
+                            <button onClick={()=>setPrintFee(f)}
+                              style={{padding:"5px 8px",background:"#fff",color:"#64748b",border:"1px solid #e2e8f0",borderRadius:"7px",cursor:"pointer",fontSize:"11px",fontWeight:600}}>
+                              🖨️
+                            </button>
+                            <button onClick={()=>downloadReceipt(f._id, f.receiptNumber)} disabled={downloadingId===f._id}
+                              style={{padding:"5px 10px",background:"#eff6ff",color:"#1a56db",border:"none",borderRadius:"7px",cursor:"pointer",fontSize:"11px",fontWeight:600}}>
+                              {downloadingId===f._id?"...":"⬇️ PDF"}
+                            </button>
+                          </div>
                         ):"—"}
                       </td>
                     </tr>
@@ -425,10 +437,16 @@ export default function Fees() {
                       <td style={{padding:"12px 16px",color:"#64748b"}}>{f.receiptNumber||"—"}</td>
                       <td style={{padding:"12px 16px",fontWeight:700,color:"#16a34a"}}>₹{f.finalAmount?.toLocaleString()}</td>
                       <td style={{padding:"12px 16px"}}>
-                        <button onClick={()=>downloadReceipt(f._id, f.receiptNumber)} disabled={downloadingId===f._id}
-                          style={{padding:"5px 10px",background:"#eff6ff",color:"#1a56db",border:"none",borderRadius:"7px",cursor:"pointer",fontSize:"11px",fontWeight:600}}>
-                          {downloadingId===f._id?"...":"⬇️ PDF"}
-                        </button>
+                        <div style={{display:"flex",gap:"6px"}}>
+                          <button onClick={()=>setPrintFee(f)}
+                            style={{padding:"5px 8px",background:"#fff",color:"#64748b",border:"1px solid #e2e8f0",borderRadius:"7px",cursor:"pointer",fontSize:"11px",fontWeight:600}}>
+                            🖨️
+                          </button>
+                          <button onClick={()=>downloadReceipt(f._id, f.receiptNumber)} disabled={downloadingId===f._id}
+                            style={{padding:"5px 10px",background:"#eff6ff",color:"#1a56db",border:"none",borderRadius:"7px",cursor:"pointer",fontSize:"11px",fontWeight:600}}>
+                            {downloadingId===f._id?"...":"⬇️ PDF"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -438,6 +456,8 @@ export default function Fees() {
           )}
         </div>
       )}
+
+      <ReceiptPrintModal fee={printFee} onClose={()=>setPrintFee(null)} />
     </div>
   );
 }
