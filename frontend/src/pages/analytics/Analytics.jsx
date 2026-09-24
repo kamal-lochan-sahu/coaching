@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import api from "../../services/api";
 import AnalyticsSkeleton from "../../components/ui/AnalyticsSkeleton";
+import toast from "react-hot-toast";
 
 const COLORS = ["#1a56db","#16a34a","#d97706","#dc2626","#7c3aed","#0891b2","#db2777","#64748b"];
 
@@ -19,6 +21,27 @@ export default function Analytics() {
   const { data:dashboard, isLoading:l1 } = useQuery({ queryKey:["dashboard"],    queryFn:()=>api.get("/analytics/dashboard").then(r=>r.data.data) });
   const { data:revenue=[], isLoading:l2 }  = useQuery({ queryKey:["revenue-chart"],queryFn:()=>api.get("/analytics/revenue").then(r=>r.data.data) });
   const { data:enqData=[], isLoading:l3 }  = useQuery({ queryKey:["enq-conversion"],queryFn:()=>api.get("/analytics/enquiry-conversion").then(r=>r.data.data) });
+  const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0,7));
+  const [downloadingReport, setDownloadingReport] = useState(false);
+
+  const handleDownloadReport = async () => {
+    setDownloadingReport(true);
+    try {
+      const res = await api.get(`/analytics/monthly-report/pdf?month=${reportMonth}`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Monthly-Report-${reportMonth}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to generate report");
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
 
   if (l1 || l2 || l3) return <AnalyticsSkeleton />;
 
@@ -28,8 +51,18 @@ export default function Analytics() {
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:"24px"}}>
-      <div><h1 style={{fontSize:"24px",fontWeight:800,color:"#0f172a"}}>Analytics & Reports</h1>
-        <p style={{fontSize:"13px",color:"#94a3b8",marginTop:"2px"}}>Complete overview of your institute</p></div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:"12px"}}>
+        <div><h1 style={{fontSize:"24px",fontWeight:800,color:"#0f172a"}}>Analytics & Reports</h1>
+          <p style={{fontSize:"13px",color:"#94a3b8",marginTop:"2px"}}>Complete overview of your institute</p></div>
+        <div style={{display:"flex",gap:"8px",alignItems:"center"}}>
+          <input type="month" value={reportMonth} onChange={e=>setReportMonth(e.target.value)}
+            style={{padding:"9px 12px",border:"1.5px solid #e2e8f0",borderRadius:"9px",fontSize:"12px",outline:"none"}} />
+          <button onClick={handleDownloadReport} disabled={downloadingReport}
+            style={{display:"flex",alignItems:"center",gap:"6px",padding:"9px 16px",background:"#1a56db",color:"#fff",border:"none",borderRadius:"9px",fontSize:"12px",fontWeight:700,cursor:"pointer"}}>
+            {downloadingReport?"Generating...":"📄 Download Monthly Report"}
+          </button>
+        </div>
+      </div>
 
       {/* KPI Summary */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:"16px"}}>

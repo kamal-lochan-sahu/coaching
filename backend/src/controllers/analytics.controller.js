@@ -1,9 +1,11 @@
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
+import User from "../models/User.js";
 import { Attendance, Fee } from "../models/Academic.js";
 import { Enquiry, Expense } from "../models/Management.js";
-import { ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
+import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
 import { cacheGet, cacheSet, TTL } from "../config/redis.js";
+import { generateMonthlyReportPDF } from "../services/report.service.js";
 
 export const getDashboard = asyncHandler(async (req, res) => {
   const ownerId = req.ownerId.toString();
@@ -152,4 +154,82 @@ export const getEnquiryConversion = asyncHandler(async (req, res) => {
     stats, total,
     conversionRate: total ? Math.round((converted / total) * 100) : 0,
   }));
+});
+
+// GET /api/analytics/monthly-report/pdf?month=YYYY-MM
+export const getMonthlyReportPDF = asyncHandler(async (req, res) => {
+  const { month } = req.query;
+  if (!month) throw new ApiError(400, "month is required (YYYY-MM)");
+
+  const [year, m] = month.split("-");
+  const start = new Date(year, m - 1, 1);
+  const end   = new Date(year, m, 0, 23, 59, 59, 999);
+
+  const [
+    totalStudents, activeStudents, newThisMonth, totalBatches,
+    feePaid, feePending, expenseAgg, attendanceAgg,
+    enquiriesNew, enquiriesConverted,
+  ] = await Promise.all([
+    Student.countDocuments({ ownerId: req.ownerId }),
+    Student.countDocuments({ ownerId: req.ownerId, status: "active" }),
+    Student.countDocuments({ ownerId: req.ownerId, admissionDate: { $gte: start, $lte: end } }),
+    Batch.countDocuments({ ownerId: req.ownerId, isActive: true }),
+    Fee.aggregate([
+      { $match: { ownerId: req.ownerId, status: "paid", month } },
+      { $group: { _id: "$paymentMode", total: { $sum: "$finalAmount" } } },
+    ]),
+    Fee.aggregate([
+      { $match: { ownerId: req.ownerId, status: "pending" } },
+      { $group: { _id: null, total: { $sum: "$finalAmount" } } },
+    ]),
+    Expense.aggregate([
+      { $match: { ownerId: req.ownerId, date: { $gte: start, $lte: end } } },
+      { $group: { _id: "$category", total: { $sum: "$amount" } } },
+    ]),
+    Attendance.aggregate([
+      { $match: { ownerId: req.ownerId, date: { $gte: start, $lte: end } } },
+      { $group: { _id: null, present: { $sum: { $cond: [{ $in: ["$status", ["present","late"]] }, 1, 0] } }, total: { $sum: 1 } } },
+    ]),
+    Enquiry.countDocuments({ ownerId: req.ownerId, createdAt: { $gte: start, $lte: end } }),
+    Enquiry.countDocuments({ ownerId: req.ownerId, status: "converted", createdAt: { $gte: start, $lte: end } }),
+  ]);
+
+  const totalRevenue = feePaid.reduce((s, f) => s + f.total, 0);
+  const totalExpense = expenseAgg.reduce((s, e) => s + e.total, 0);
+  const attRow = attendanceAgg[0] || { present: 0, total: 0 };
+
+  const owner = await User.findById(req.ownerId).select("branding");
+  const instituteName = owner?.branding?.instituteName || "EduManage";
+  const brandColor    = owner?.branding?.primaryColor  || "#3b82f6";
+
+  const data = {
+    month,
+    students: { total: totalStudents, active: activeStudents, newThisMonth },
+    batches:  { total: totalBatches },
+    fees: {
+      collected: totalRevenue,
+      pending:   feePending[0]?.total || 0,
+      byPaymentMode: Object.fromEntries(feePaid.filter(f => f._id).map(f => [f._id, f.total])),
+    },
+    expenses: {
+      total: totalExpense,
+      byCategory: Object.fromEntries(expenseAgg.filter(e => e._id).map(e => [e._id, e.total])),
+    },
+    netProfit: totalRevenue - totalExpense,
+    attendance: { percentage: attRow.total ? Math.round((attRow.present / attRow.total) * 100) : 0 },
+    enquiries: {
+      newThisMonth: enquiriesNew,
+      converted: enquiriesConverted,
+      conversionRate: enquiriesNew ? Math.round((enquiriesConverted / enquiriesNew) * 100) : 0,
+    },
+  };
+
+  const pdfBuffer = await generateMonthlyReportPDF(data, instituteName, brandColor);
+
+  res.set({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename="Monthly-Report-${month}.pdf"`,
+    "Content-Length": pdfBuffer.length,
+  });
+  return res.send(pdfBuffer);
 });

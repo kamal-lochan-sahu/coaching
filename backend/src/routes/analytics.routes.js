@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getDashboard, getRevenueChart, getAttendanceSummary, getEnquiryConversion } from "../controllers/analytics.controller.js";
+import { getDashboard, getRevenueChart, getAttendanceSummary, getEnquiryConversion, getMonthlyReportPDF } from "../controllers/analytics.controller.js";
 import { protect, allRoles } from "../middleware/auth.middleware.js";
 const router = Router();
 router.use(protect);
@@ -7,4 +7,5 @@ router.get("/dashboard",          allRoles, getDashboard);
 router.get("/revenue",            allRoles, getRevenueChart);
 router.get("/attendance-summary", allRoles, getAttendanceSummary);
 router.get("/enquiry-conversion", allRoles, getEnquiryConversion);
+router.get("/monthly-report/pdf", allRoles, getMonthlyReportPDF);
 export default router;

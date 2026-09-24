@@ -119,3 +119,80 @@ export const generateReportCardPDF = (student, results, tests, instituteName, br
     doc.end();
   });
 };
+
+export const generateMonthlyReportPDF = (data, instituteName, brandColor = "#3b82f6") => {
+  return new Promise((resolve) => {
+    const doc    = new PDFDocument({ margin: 40 });
+    const chunks = [];
+    doc.on("data", c => chunks.push(c));
+    doc.on("end",  () => resolve(Buffer.concat(chunks)));
+
+    const w = doc.page.width;
+    const monthLabel = new Date(`${data.month}-01`).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+
+    // Header
+    doc.rect(0, 0, w, 90).fill(brandColor);
+    doc.fillColor("white").fontSize(22).font("Helvetica-Bold").text(instituteName, 40, 25);
+    doc.fontSize(13).font("Helvetica").text(`Monthly Business Report — ${monthLabel}`, 40, 55);
+
+    let y = 115;
+
+    const sectionTitle = (title) => {
+      doc.fillColor("#111").fontSize(13).font("Helvetica-Bold").text(title, 40, y);
+      y += 20;
+    };
+    const row = (label, value, valueColor = "#111") => {
+      doc.fontSize(10).font("Helvetica").fillColor("#555").text(label, 50, y);
+      doc.fontSize(10).font("Helvetica-Bold").fillColor(valueColor).text(value, w - 200, y, { width: 150, align: "right" });
+      doc.moveTo(40, y + 15).lineTo(w - 40, y + 15).stroke("#e5e7eb");
+      y += 20;
+    };
+
+    // Overview
+    sectionTitle("Overview");
+    row("Total Students", data.students.total);
+    row("Active Students", data.students.active);
+    row("New Admissions This Month", data.students.newThisMonth);
+    row("Active Batches", data.batches.total);
+    y += 8;
+
+    // Finance
+    sectionTitle("Finance");
+    row("Fee Collected This Month", `Rs. ${data.fees.collected.toLocaleString("en-IN")}`, "#16a34a");
+    row("Total Pending Fees", `Rs. ${data.fees.pending.toLocaleString("en-IN")}`, "#d97706");
+    row("Total Expenses This Month", `Rs. ${data.expenses.total.toLocaleString("en-IN")}`, "#dc2626");
+    row("Net Profit", `Rs. ${data.netProfit.toLocaleString("en-IN")}`, data.netProfit >= 0 ? "#16a34a" : "#dc2626");
+    y += 8;
+
+    // Payment mode breakdown
+    if (Object.keys(data.fees.byPaymentMode).length) {
+      sectionTitle("Fee Collection by Payment Mode");
+      for (const [mode, amt] of Object.entries(data.fees.byPaymentMode)) {
+        row(mode.toUpperCase(), `Rs. ${amt.toLocaleString("en-IN")}`);
+      }
+      y += 8;
+    }
+
+    // Expense breakdown
+    if (Object.keys(data.expenses.byCategory).length) {
+      sectionTitle("Expenses by Category");
+      for (const [cat, amt] of Object.entries(data.expenses.byCategory)) {
+        row(cat.charAt(0).toUpperCase() + cat.slice(1), `Rs. ${amt.toLocaleString("en-IN")}`);
+      }
+      y += 8;
+    }
+
+    // Attendance & Enquiries
+    sectionTitle("Attendance & Enquiries");
+    row("Average Attendance", `${data.attendance.percentage}%`);
+    row("New Enquiries This Month", data.enquiries.newThisMonth);
+    row("Converted to Admissions", data.enquiries.converted);
+    row("Conversion Rate", `${data.enquiries.conversionRate}%`);
+
+    // Footer
+    doc.fillColor("#9ca3af").fontSize(8).font("Helvetica")
+       .text(`Generated on ${new Date().toLocaleDateString("en-IN")} · EduManage`, 40, doc.page.height - 50, { align: "center", width: w - 80 });
+
+    doc.end();
+  });
+};
