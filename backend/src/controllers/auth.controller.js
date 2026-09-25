@@ -154,7 +154,11 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   const result = await sendEmail({
     to: user.email,
     subject: "Your EduManage password reset code",
-    html: emailTemplates.passwordResetOtp(user.name, otp),
+    html: emailTemplates.passwordResetOtp(
+      user.branding?.instituteName || "EduManage",
+      user.branding?.primaryColor  || "#3b82f6",
+      user.name, otp
+    ),
   });
 
   if (!result.success) {

@@ -6,6 +6,7 @@ import { generateReceiptNumber } from "../utils/receiptNumber.utils.js";
 import { invalidateDashboardCache, invalidateRevenueCache } from "../config/redis.js";
 import { generateFeeReceiptPDF } from "../services/report.service.js";
 import { sendCSV } from "../utils/csv.utils.js";
+import { sendEmail, emailTemplates } from "../config/email.js";
 
 export const getFees = asyncHandler(async (req, res) => {
   const { branchId, month, status, page = 1, limit = 20 } = req.query;
@@ -76,9 +77,27 @@ export const collectFee = asyncHandler(async (req, res) => {
     });
   }
 
-  const populated = await fee.populate("studentId","name phone guardianPhone guardianName");
+  const populated = await fee.populate("studentId","name phone guardianPhone guardianName email");
   await invalidateDashboardCache(req.ownerId);
   await invalidateRevenueCache(req.ownerId);
+
+  // Best-effort: email a copy of the receipt if the student has an email on file.
+  // Never blocks or fails the fee-collection response.
+  if (populated.studentId?.email) {
+    try {
+      const owner = await User.findById(req.ownerId).select("branding");
+      const instituteName = owner?.branding?.instituteName || "EduManage";
+      const brandColor    = owner?.branding?.primaryColor  || "#3b82f6";
+      await sendEmail({
+        to: populated.studentId.email,
+        subject: `Fee Receipt — ${receiptNumber}`,
+        html: emailTemplates.feeReceipt(instituteName, brandColor, populated.studentId.name, finalAmount, receiptNumber, month),
+      });
+    } catch (e) {
+      console.error(`Fee receipt email failed: ${e.message}`);
+    }
+  }
+
   return res.status(201).json(new ApiResponse(201, populated, "Fee collected successfully"));
 });
 
