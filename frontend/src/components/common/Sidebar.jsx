@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Users, BookOpen, ClipboardCheck, CreditCard, FileText, UserCheck, MessageSquare, TrendingDown, BarChart3, Settings, GraduationCap, Calendar, Bell, X } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, ClipboardCheck, CreditCard, FileText, UserCheck, MessageSquare, TrendingDown, BarChart3, Settings, GraduationCap, Calendar, Bell, X, ScrollText } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 
 const links = [
@@ -15,6 +15,7 @@ const links = [
   { to:"/expenses",      icon:TrendingDown,    label:"Expenses"       },
   { to:"/notifications", icon:Bell,            label:"Notifications"  },
   { to:"/analytics",     icon:BarChart3,       label:"Analytics"      },
+  { to:"/audit-log",     icon:ScrollText,      label:"Audit Log",     roles:["owner","admin"] },
   { to:"/settings",      icon:Settings,        label:"Settings"       },
 ];
 
@@ -51,7 +52,7 @@ export default function Sidebar({ onClose, isMobile }) {
 
       {/* Nav */}
       <nav style={{ flex:1, padding:"8px" }}>
-        {links.map(({ to, icon:Icon, label }) => (
+        {links.filter(l => !l.roles || l.roles.includes(user?.role)).map(({ to, icon:Icon, label }) => (
           <NavLink key={to} to={to} end={to==="/"}
             style={({ isActive }) => ({
               display:"flex", alignItems:"center", gap:"10px",

@@ -23,6 +23,7 @@ import notificationRoutes from "./routes/notification.routes.js";
 import analyticsRoutes    from "./routes/analytics.routes.js";
 import settingsRoutes     from "./routes/settings.routes.js";
 import uploadRoutes       from "./routes/upload.routes.js";
+import auditRoutes        from "./routes/audit.routes.js";
 
 const app = express();
 
@@ -75,6 +76,7 @@ app.use(`${API}/notifications`, notificationRoutes);
 app.use(`${API}/analytics`,     analyticsRoutes);
 app.use(`${API}/settings`,      settingsRoutes);
 app.use(`${API}/upload`,        uploadRoutes);
+app.use(`${API}/audit-logs`,    auditRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

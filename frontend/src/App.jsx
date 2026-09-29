@@ -22,6 +22,7 @@ import Analytics from "./pages/analytics/Analytics";
 import Timetable from "./pages/timetable/Timetable";
 import Notifications from "./pages/notifications/Notifications";
 import Settings from "./pages/Settings";
+import AuditLog from "./pages/audit/AuditLog";
 import NotFound from "./pages/NotFound";
 
 const qc = new QueryClient({
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="timetable"           element={<Timetable />} />
             <Route path="notifications"       element={<Notifications />} />
             <Route path="settings"            element={<Settings />} />
+            <Route path="audit-log"           element={<AuditLog />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

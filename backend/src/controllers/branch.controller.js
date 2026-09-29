@@ -1,5 +1,6 @@
 import Branch from "../models/Branch.js";
 import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
+import { logAudit } from "../utils/auditLog.utils.js";
 
 // GET /api/branches
 export const getBranches = asyncHandler(async (req, res) => {
@@ -14,6 +15,7 @@ export const createBranch = asyncHandler(async (req, res) => {
   const branch = await Branch.create({
     ownerId: req.ownerId, name, address, phone, email,
   });
+  logAudit({ req, action:"create", entityType:"Branch", entityId:branch._id, description:`Created branch "${branch.name}"` });
   return res.status(201).json(new ApiResponse(201, branch, "Branch created"));
 });
 
@@ -32,6 +34,7 @@ export const updateBranch = asyncHandler(async (req, res) => {
     { new: true, runValidators: true }
   );
   if (!branch) throw new ApiError(404, "Branch not found");
+  logAudit({ req, action:"update", entityType:"Branch", entityId:branch._id, description:`Updated branch "${branch.name}"` });
   return res.status(200).json(new ApiResponse(200, branch, "Branch updated"));
 });
 
@@ -43,5 +46,6 @@ export const deleteBranch = asyncHandler(async (req, res) => {
     { new: true }
   );
   if (!branch) throw new ApiError(404, "Branch not found");
+  logAudit({ req, action:"delete", entityType:"Branch", entityId:branch._id, description:`Deleted branch "${branch.name}"` });
   return res.status(200).json(new ApiResponse(200, null, "Branch deleted"));
 });

@@ -7,6 +7,7 @@ import { invalidateDashboardCache, invalidateRevenueCache } from "../config/redi
 import { generateFeeReceiptPDF } from "../services/report.service.js";
 import { sendCSV } from "../utils/csv.utils.js";
 import { sendEmail, emailTemplates } from "../config/email.js";
+import { logAudit } from "../utils/auditLog.utils.js";
 
 export const getFees = asyncHandler(async (req, res) => {
   const { branchId, month, status, page = 1, limit = 20 } = req.query;
@@ -98,6 +99,9 @@ export const collectFee = asyncHandler(async (req, res) => {
     }
   }
 
+  logAudit({ req, action:"collect_fee", entityType:"Fee", entityId:fee._id,
+    description:`Collected ₹${finalAmount.toLocaleString("en-IN")} fee from "${populated.studentId.name}" (${month})` });
+
   return res.status(201).json(new ApiResponse(201, populated, "Fee collected successfully"));
 });
 
@@ -130,9 +134,11 @@ export const waiveFee = asyncHandler(async (req, res) => {
     { _id: req.params.id, ownerId: req.ownerId },
     { status: "waived", note: reason },
     { new: true }
-  );
+  ).populate("studentId", "name");
   if (!fee) throw new ApiError(404, "Fee record not found");
   await invalidateDashboardCache(req.ownerId);
+  logAudit({ req, action:"waive_fee", entityType:"Fee", entityId:fee._id,
+    description:`Waived ₹${fee.finalAmount.toLocaleString("en-IN")} fee for "${fee.studentId?.name||"student"}" — reason: ${reason}` });
   return res.json(new ApiResponse(200, fee, "Fee waived"));
 });
 

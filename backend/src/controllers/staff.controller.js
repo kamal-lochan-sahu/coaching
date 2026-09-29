@@ -1,6 +1,7 @@
 import { Staff, Salary } from "../models/Management.js";
 import User from "../models/User.js";
 import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
+import { logAudit } from "../utils/auditLog.utils.js";
 
 export const getStaff = asyncHandler(async (req, res) => {
   const { branchId } = req.query;
@@ -30,6 +31,7 @@ export const addStaff = asyncHandler(async (req, res) => {
     salary: salary || {},
   });
 
+  logAudit({ req, action:"create", entityType:"Staff", entityId:staff._id, description:`Added staff member "${name}" (${role})` });
   return res.status(201).json(new ApiResponse(201, staff, "Staff member added"));
 });
 
@@ -44,8 +46,9 @@ export const updateStaff = asyncHandler(async (req, res) => {
   const staff = await Staff.findOneAndUpdate(
     { _id: req.params.id, ownerId: req.ownerId },
     req.body, { new: true }
-  );
+  ).populate("userId","name");
   if (!staff) throw new ApiError(404, "Staff not found");
+  logAudit({ req, action:"update", entityType:"Staff", entityId:staff._id, description:`Updated staff member "${staff.userId?.name||""}"` });
   return res.json(new ApiResponse(200, staff, "Staff updated"));
 });
 
@@ -63,6 +66,11 @@ export const paySalary = asyncHandler(async (req, res) => {
     },
     { upsert: true, new: true }
   );
+
+  const staff = await Staff.findById(req.params.id).populate("userId", "name");
+  logAudit({ req, action:"pay_salary", entityType:"Staff", entityId:req.params.id,
+    description:`Paid ₹${netSalary.toLocaleString("en-IN")} salary to "${staff?.userId?.name||"staff"}" (${month}/${year})` });
+
   return res.status(201).json(new ApiResponse(201, salary, "Salary paid"));
 });
 
