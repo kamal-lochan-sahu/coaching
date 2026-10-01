@@ -1,8 +1,10 @@
-import { Menu, LogOut, Bell } from "lucide-react";
+import { Menu, LogOut, Bell, Sun, Moon } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
+import { useThemeStore } from "../../store/themeStore";
 
 export default function Navbar({ onToggleSidebar }) {
   const { user, logout } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
 
   return (
     <header style={{
@@ -25,6 +27,10 @@ export default function Navbar({ onToggleSidebar }) {
       </div>
 
       <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+        <button onClick={toggleTheme} title={theme==="dark" ? "Switch to light mode" : "Switch to dark mode"}
+          style={{ padding:"6px", borderRadius:"10px", background:"none", border:"none", cursor:"pointer", display:"flex" }}>
+          {theme==="dark" ? <Sun size={20} color="#64748b" /> : <Moon size={20} color="#64748b" />}
+        </button>
         <button style={{ padding:"6px", borderRadius:"10px", background:"none", border:"none", cursor:"pointer", display:"flex" }}>
           <Bell size={20} color="#64748b" />
         </button>

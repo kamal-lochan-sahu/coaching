@@ -33,3 +33,21 @@ body {
 
 /* Safe area for PWA */
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Dark mode -- global invert technique. This app's styling is almost
+   entirely inline hex colors (not CSS variables), so a real per-component
+   dark theme would mean touching every page. Inverting the whole rendered
+   page (and re-inverting images/video back to normal) is the pragmatic,
+   well-known way to retrofit dark mode onto an app like this without a
+   large refactor. Disabled for print so receipts still print normally. */
+@media screen {
+  html { transition: filter 0.2s ease; }
+  html[data-theme="dark"] {
+    filter: invert(1) hue-rotate(180deg);
+    background: #fff;
+  }
+  html[data-theme="dark"] img,
+  html[data-theme="dark"] video {
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
