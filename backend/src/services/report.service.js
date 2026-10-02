@@ -196,3 +196,60 @@ export const generateMonthlyReportPDF = (data, instituteName, brandColor = "#3b8
     doc.end();
   });
 };
+
+// Standard CR-80 ID card size: 3.375in x 2.125in = 243 x 153 points.
+export const generateStudentIDCardPDF = async (student, batch, instituteName, brandColor = "#3b82f6") => {
+  // Best-effort fetch of the student's photo — falls back to an initials
+  // avatar if there's no photo or the fetch fails for any reason.
+  let photoBuffer = null;
+  if (student.photo) {
+    try {
+      const resp = await fetch(student.photo);
+      if (resp.ok) photoBuffer = Buffer.from(await resp.arrayBuffer());
+    } catch {
+      photoBuffer = null;
+    }
+  }
+
+  return new Promise((resolve) => {
+    const W = 243, H = 153;
+    const doc    = new PDFDocument({ size: [W, H], margin: 0 });
+    const chunks = [];
+    doc.on("data", c => chunks.push(c));
+    doc.on("end",  () => resolve(Buffer.concat(chunks)));
+
+    // Header band
+    doc.rect(0, 0, W, 34).fill(brandColor);
+    doc.fillColor("white").fontSize(10).font("Helvetica-Bold").text(instituteName, 10, 6, { width: W - 20 });
+    doc.fontSize(6.5).font("Helvetica").text("STUDENT IDENTITY CARD", 10, 20);
+
+    // Photo box
+    const photoSize = 54, photoX = 10, photoY = 44;
+    if (photoBuffer) {
+      doc.image(photoBuffer, photoX, photoY, { width: photoSize, height: photoSize, fit: [photoSize, photoSize] });
+    } else {
+      doc.rect(photoX, photoY, photoSize, photoSize).fill("#f1f5f9");
+      doc.fillColor(brandColor).fontSize(22).font("Helvetica-Bold")
+         .text((student.name?.[0] || "?").toUpperCase(), photoX, photoY + 15, { width: photoSize, align: "center" });
+    }
+    doc.rect(photoX, photoY, photoSize, photoSize).lineWidth(1).stroke("#e5e7eb");
+
+    // Details
+    const tx = photoX + photoSize + 10;
+    const tw = W - tx - 10;
+    doc.fillColor("#111").fontSize(11).font("Helvetica-Bold").text(student.name || "—", tx, photoY, { width: tw });
+    doc.fontSize(7).font("Helvetica").fillColor("#555");
+    doc.text(`Adm No: ${student.admissionNumber || "—"}`, tx, photoY + 18, { width: tw });
+    doc.text(`Batch: ${batch?.name || "—"}`, tx, photoY + 29, { width: tw });
+    doc.text(`DOB: ${student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString("en-IN") : "—"}`, tx, photoY + 40, { width: tw });
+
+    // Footer
+    doc.moveTo(10, H - 28).lineTo(W - 10, H - 28).lineWidth(0.5).stroke("#e5e7eb");
+    doc.fontSize(6.5).fillColor("#888")
+       .text(`Emergency: ${student.guardianName || "—"} · ${student.guardianPhone || "—"}`, 10, H - 22, { width: W - 20 });
+    doc.fontSize(6).fillColor("#aaa")
+       .text(`Issued ${new Date().toLocaleDateString("en-IN")}`, 10, H - 12);
+
+    doc.end();
+  });
+};

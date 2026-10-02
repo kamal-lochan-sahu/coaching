@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Edit, Camera } from "lucide-react";
+import { ArrowLeft, Edit, Camera, CreditCard } from "lucide-react";
 import api from "../../services/api";
 import DetailSkeleton from "../../components/ui/DetailSkeleton";
 import toast from "react-hot-toast";
@@ -41,6 +41,26 @@ export default function StudentDetail() {
     e.target.value = "";
   };
 
+  const [downloadingCard, setDownloadingCard] = useState(false);
+  const handleDownloadIDCard = async () => {
+    setDownloadingCard(true);
+    try {
+      const res = await api.get(`/students/${id}/id-card`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `ID-Card-${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to generate ID card");
+    } finally {
+      setDownloadingCard(false);
+    }
+  };
+
   if (isLoading) return <DetailSkeleton />;
   const { student, attendance=[], fees=[], results=[] } = history || {};
   if (!student) return <div style={{padding:"40px",textAlign:"center",color:"#94a3b8"}}>Student not found</div>;
@@ -63,10 +83,16 @@ export default function StudentDetail() {
             <p style={{fontSize:"13px",color:"#94a3b8"}}>{student.admissionNumber} · {student.currentBatch?.name || "No batch"}</p>
           </div>
         </div>
-        <Link to={`/students/${id}/edit`}
-          style={{display:"flex",alignItems:"center",gap:"8px",padding:"10px 20px",background:"#1a56db",color:"#fff",borderRadius:"10px",textDecoration:"none",fontSize:"13px",fontWeight:600}}>
-          <Edit size={15} /> Edit Student
-        </Link>
+        <div style={{display:"flex",gap:"10px"}}>
+          <button onClick={handleDownloadIDCard} disabled={downloadingCard}
+            style={{display:"flex",alignItems:"center",gap:"8px",padding:"10px 18px",background:"#fff",color:"#64748b",border:"1.5px solid #e2e8f0",borderRadius:"10px",fontSize:"13px",fontWeight:600,cursor:"pointer"}}>
+            <CreditCard size={15} /> {downloadingCard?"Generating...":"ID Card"}
+          </button>
+          <Link to={`/students/${id}/edit`}
+            style={{display:"flex",alignItems:"center",gap:"8px",padding:"10px 20px",background:"#1a56db",color:"#fff",borderRadius:"10px",textDecoration:"none",fontSize:"13px",fontWeight:600}}>
+            <Edit size={15} /> Edit Student
+          </Link>
+        </div>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 2fr",gap:"16px"}}>

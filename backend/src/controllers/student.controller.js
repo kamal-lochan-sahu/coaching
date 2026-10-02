@@ -1,10 +1,12 @@
 import Student from "../models/Student.js";
 import Batch from "../models/Batch.js";
+import User from "../models/User.js";
 import { Attendance, Fee, Result } from "../models/Academic.js";
 import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
 import { invalidateDashboardCache } from "../config/redis.js";
 import { sendCSV } from "../utils/csv.utils.js";
 import { logAudit } from "../utils/auditLog.utils.js";
+import { generateStudentIDCardPDF } from "../services/report.service.js";
 
 export const getStudents = asyncHandler(async (req, res) => {
   const { branchId, batchId, status = "active", page = 1, limit = 20 } = req.query;
@@ -163,4 +165,24 @@ export const transferStudent = asyncHandler(async (req, res) => {
   await Batch.findByIdAndUpdate(newBatchId, { $inc: { enrolled: 1 } });
 
   return res.json(new ApiResponse(200, student, "Student transferred successfully"));
+});
+
+// GET /api/students/:id/id-card — downloadable PDF ID card
+export const downloadIDCardPDF = asyncHandler(async (req, res) => {
+  const student = await Student.findOne({ _id: req.params.id, ownerId: req.ownerId })
+    .populate("currentBatch", "name");
+  if (!student) throw new ApiError(404, "Student not found");
+
+  const owner = await User.findById(req.ownerId).select("branding");
+  const instituteName = owner?.branding?.instituteName || "EduManage";
+  const brandColor    = owner?.branding?.primaryColor  || "#3b82f6";
+
+  const pdfBuffer = await generateStudentIDCardPDF(student, student.currentBatch, instituteName, brandColor);
+
+  res.set({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename="ID-Card-${student.admissionNumber || student._id}.pdf"`,
+    "Content-Length": pdfBuffer.length,
+  });
+  return res.send(pdfBuffer);
 });

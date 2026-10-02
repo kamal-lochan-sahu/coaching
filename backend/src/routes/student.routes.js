@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getStudents, searchStudents, createStudent, getStudent, updateStudent, deleteStudent, getStudentAttendance, getStudentFees, getStudentResults, getStudentHistory, transferStudent, exportStudentsCSV } from "../controllers/student.controller.js";
+import { getStudents, searchStudents, createStudent, getStudent, updateStudent, deleteStudent, getStudentAttendance, getStudentFees, getStudentResults, getStudentHistory, transferStudent, exportStudentsCSV, downloadIDCardPDF } from "../controllers/student.controller.js";
 import { protect, adminAndAbove, teacherAndAbove, allRoles } from "../middleware/auth.middleware.js";
 import { validate } from "../middleware/validate.middleware.js";
 import { createStudentSchema, updateStudentSchema, transferStudentSchema } from "../validators/schemas.js";
@@ -16,5 +16,6 @@ router.get("/:id/history",    allRoles, getStudentHistory);
 router.get("/:id/attendance", allRoles, getStudentAttendance);
 router.get("/:id/fees",       allRoles, getStudentFees);
 router.get("/:id/results",    allRoles, getStudentResults);
+router.get("/:id/id-card",    allRoles, downloadIDCardPDF);
 router.put("/:id/transfer",   adminAndAbove, validate(transferStudentSchema), transferStudent);
 export default router;
