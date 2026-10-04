@@ -27,16 +27,34 @@ import auditRoutes        from "./routes/audit.routes.js";
 
 const app = express();
 
+// Render (like most PaaS hosts) puts a reverse proxy in front of the app.
+// Without this, req.ip is the PROXY's address, so every user on the platform
+// would share one rate-limit bucket (one busy institute could lock out everyone).
+app.set("trust proxy", 1);
+
+// CLIENT_URL can be one URL or a comma-separated list (e.g. production + a Vercel
+// preview). Trailing slashes are ignored so "https://x.app/" still matches "https://x.app".
+const stripSlash = (s) => s.trim().replace(/\/+$/, "");
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map(stripSlash)
+  .filter(Boolean);
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({
-  origin: process.env.CLIENT_URL || "http://localhost:3000",
+  origin: (origin, cb) => {
+    // No Origin header = same-origin request, curl, or an uptime monitor -> allow.
+    if (!origin || allowedOrigins.includes(stripSlash(origin))) return cb(null, true);
+    return cb(null, false); // no CORS headers -> the browser blocks it
+  },
   credentials: true,
   methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
   allowedHeaders: ["Content-Type","Authorization"],
 }));
 app.use(compression());
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+// Photos/documents go through multer (multipart, 5MB cap), not JSON — so 1mb is plenty.
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(requestLogger);
 app.use("/api", rateLimiter);
 
@@ -48,7 +66,7 @@ app.get("/", (req, res) => res.json({
   environment: process.env.NODE_ENV || "development"
 }));
 
-// API Health route
+// API Health route (the rate limiter skips /health, so uptime pings never get blocked)
 app.get("/api/health", (req, res) => res.json({
   status: "healthy",
   uptime: process.uptime(),

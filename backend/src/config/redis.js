@@ -3,12 +3,12 @@ import Redis from "ioredis";
 let redisClient = null;
 
 export const connectRedis = async () => {
-  try {
-    if (!process.env.REDIS_URL || process.env.REDIS_URL.includes("<password>")) {
-      console.warn("⚠️  Redis URL not configured — caching disabled");
-      return;
-    }
+  if (!process.env.REDIS_URL || process.env.REDIS_URL.includes("<password>")) {
+    console.warn("⚠️  Redis URL not configured — caching disabled");
+    return;
+  }
 
+  try {
     redisClient = new Redis(process.env.REDIS_URL, {
       maxRetriesPerRequest: 3,
       retryStrategy(times) {
@@ -24,8 +24,16 @@ export const connectRedis = async () => {
   } catch (error) {
     console.error(`❌ Redis connection failed: ${error.message}`);
     console.warn("⚠️  App will run without caching");
+    // Don't leave a half-dead client behind — stop it from retrying/logging forever.
+    try { redisClient?.disconnect(); } catch {}
     redisClient = null;
   }
+};
+
+export const disconnectRedis = async () => {
+  if (!redisClient) return;
+  try { await redisClient.quit(); } catch { try { redisClient.disconnect(); } catch {} }
+  redisClient = null;
 };
 
 export const TTL = {
@@ -49,16 +57,8 @@ export const cacheSet = async (key, value, ttl = TTL.MEDIUM) => {
 };
 
 export const cacheDelete = async (...keys) => {
-  if (!redisClient) return;
+  if (!redisClient || keys.length === 0) return;
   try { await redisClient.del(...keys); } catch {}
-};
-
-export const cacheDeletePattern = async (pattern) => {
-  if (!redisClient) return;
-  try {
-    const keys = await redisClient.keys(pattern);
-    if (keys.length) await redisClient.del(...keys);
-  } catch {}
 };
 
 // ✅ Cache invalidation helpers — call after any mutation that changes
