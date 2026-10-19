@@ -1,8 +1,10 @@
 import { Fee } from "../models/Academic.js";
 import Student from "../models/Student.js";
+import Batch from "../models/Batch.js";
+import Branch from "../models/Branch.js";
 import User from "../models/User.js";
 import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
-import { generateReceiptNumber } from "../utils/receiptNumber.utils.js";
+import { withReceiptNumber } from "../utils/receiptNumber.utils.js";
 import { invalidateDashboardCache, invalidateRevenueCache } from "../config/redis.js";
 import { generateFeeReceiptPDF } from "../services/report.service.js";
 import { sendCSV } from "../utils/csv.utils.js";
@@ -35,29 +37,39 @@ export const collectFee = asyncHandler(async (req, res) => {
     throw new ApiError(400, "studentId, amount and month are required");
   }
 
-  const finalAmount    = Number(amount) - Number(discount);
-  const receiptNumber  = await generateReceiptNumber(Fee, req.ownerId);
+  const finalAmount = Number(amount) - Number(discount);
 
-  // ✅ FIX: Update existing pending fee OR create new paid record
-  const existingPending = await Fee.findOne({
-    studentId, batchId, month, status: "pending", ownerId: req.ownerId,
-  });
+  // The ids come from the client — make sure they all belong to THIS institute.
+  // (Otherwise the populate below would leak another institute's student details.)
+  const [studentOk, batchOk, branchOk] = await Promise.all([
+    Student.exists({ _id: studentId, ownerId: req.ownerId }),
+    Batch.exists({ _id: batchId, ownerId: req.ownerId }),
+    Branch.exists({ _id: branchId, ownerId: req.ownerId }),
+  ]);
+  if (!studentOk || !batchOk || !branchOk) throw new ApiError(404, "Student, batch or branch not found");
 
-  let fee;
-  if (existingPending) {
-    // Update the existing pending record to paid
-    existingPending.amount        = Number(amount);
-    existingPending.discount      = Number(discount);
-    existingPending.finalAmount   = finalAmount;
-    existingPending.paidDate      = new Date();
-    existingPending.paymentMode   = paymentMode;
-    existingPending.receiptNumber = receiptNumber;
-    existingPending.status        = "paid";
-    existingPending.collectedBy   = req.user._id;
-    existingPending.note          = note || "";
-    await existingPending.save();
-    fee = existingPending;
-  } else {
+  // Update the existing pending fee OR create a new paid record. withReceiptNumber()
+  // picks the next receipt number for this institute and retries if two staff members
+  // collect at the exact same moment (the unique index rejects the duplicate).
+  const fee = await withReceiptNumber(Fee, req.ownerId, async (receiptNumber) => {
+    const existingPending = await Fee.findOne({
+      studentId, batchId, month, status: "pending", ownerId: req.ownerId,
+    });
+
+    if (existingPending) {
+      existingPending.amount        = Number(amount);
+      existingPending.discount      = Number(discount);
+      existingPending.finalAmount   = finalAmount;
+      existingPending.paidDate      = new Date();
+      existingPending.paymentMode   = paymentMode;
+      existingPending.receiptNumber = receiptNumber;
+      existingPending.status        = "paid";
+      existingPending.collectedBy   = req.user._id;
+      existingPending.note          = note || "";
+      await existingPending.save();
+      return existingPending;
+    }
+
     // Check not already paid this month
     const alreadyPaid = await Fee.findOne({
       studentId, month, status: "paid", ownerId: req.ownerId,
@@ -65,8 +77,7 @@ export const collectFee = asyncHandler(async (req, res) => {
     if (alreadyPaid) {
       throw new ApiError(409, `Fee already collected for ${month}. Receipt: ${alreadyPaid.receiptNumber}`);
     }
-    // Create new paid record
-    fee = await Fee.create({
+    return Fee.create({
       ownerId: req.ownerId, branchId, studentId, batchId,
       amount: Number(amount), discount: Number(discount), finalAmount,
       month, paymentMode,
@@ -76,7 +87,8 @@ export const collectFee = asyncHandler(async (req, res) => {
       collectedBy: req.user._id,
       note: note || "",
     });
-  }
+  });
+  const receiptNumber = fee.receiptNumber;
 
   const populated = await fee.populate("studentId","name phone guardianPhone guardianName email");
   await invalidateDashboardCache(req.ownerId);

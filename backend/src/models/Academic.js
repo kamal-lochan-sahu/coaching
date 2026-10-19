@@ -29,7 +29,7 @@ const feeSchema = new mongoose.Schema({
   dueDate:       Date,
   paidDate:      Date,
   paymentMode:   { type: String, enum: ["cash","upi","cheque","online",""], default: "" },
-  receiptNumber: { type: String, unique: true, sparse: true },
+  receiptNumber: { type: String },   // unique per institute — see the (ownerId, receiptNumber) index below
   receiptUrl:    String,
   status:        { type: String, enum: ["pending","paid","partial","waived"], default: "pending" },
   note:          String,
@@ -37,6 +37,11 @@ const feeSchema = new mongoose.Schema({
 }, { timestamps: true });
 feeSchema.index({ studentId: 1, status: 1 });
 feeSchema.index({ ownerId: 1, month: 1, status: 1 });
+// Unique per institute (NOT global). Partial, so pending fees without a receipt number never clash.
+feeSchema.index(
+  { ownerId: 1, receiptNumber: 1 },
+  { unique: true, partialFilterExpression: { receiptNumber: { $type: "string" } } }
+);
 export const Fee = mongoose.model("Fee", feeSchema);
 
 // ── Test ──────────────────────────────────────────────

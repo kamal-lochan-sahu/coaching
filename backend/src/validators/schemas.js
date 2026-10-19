@@ -116,7 +116,7 @@ export const collectFeeSchema = Joi.object({
   batchId: objectId().required(),
   branchId: objectId().required(),
   amount: Joi.number().min(0).required(),
-  discount: Joi.number().min(0).default(0),
+  discount: Joi.number().min(0).max(Joi.ref("amount")).default(0),
   paymentMode: Joi.string().valid("cash","upi","cheque","online",""),
   month: Joi.string().pattern(/^\d{4}-\d{2}$/).required(),
   note: Joi.string().allow("").max(500),
@@ -141,7 +141,7 @@ export const createTestSchema = Joi.object({
   subject: Joi.string().allow("").max(100),
   date: Joi.date().required(),
   totalMarks: Joi.number().min(1).required(),
-  passingMarks: Joi.number().min(0).required(),
+  passingMarks: Joi.number().min(0).max(Joi.ref("totalMarks")).required(),
 }).unknown(true);
 
 export const updateTestSchema = Joi.object({
@@ -293,7 +293,7 @@ export const updateSettingsSchema = Joi.object({
 
 export const updateBrandingSchema = Joi.object({
   instituteName: Joi.string().max(100),
-  primaryColor: Joi.string().max(20),
+  primaryColor: Joi.string().pattern(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/).message("primaryColor must be a hex color like #1a56db"),
   logo: Joi.string().allow("", null),
   domain: Joi.string().allow("", null),
 }).min(1).unknown(true);

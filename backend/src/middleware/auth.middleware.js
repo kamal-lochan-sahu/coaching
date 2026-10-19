@@ -12,6 +12,9 @@ export const protect = async (req, res, next) => {
     const decoded = verifyAccessToken(token);
     const user    = await User.findById(decoded.userId).select("-password -refreshToken");
     if (!user || !user.isActive) throw new ApiError(401, "Invalid or expired token");
+    // A staff account must always belong to an institute; without an ownerId every query
+    // filter would silently become { ownerId: null }.
+    if (user.role !== "owner" && !user.ownerId) throw new ApiError(401, "Invalid account");
     req.user    = user;
     req.ownerId = user.role === "owner" ? user._id : user.ownerId;
     next();

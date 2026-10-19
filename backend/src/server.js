@@ -4,6 +4,8 @@ import app from "./app.js";
 import connectDB from "./config/db.js";
 import { connectRedis, disconnectRedis } from "./config/redis.js";
 import { connectEmail } from "./config/email.js";
+import { runMigrations } from "./config/migrations.js";
+import { validateAuthEnv } from "./utils/jwt.utils.js";
 import { connectTwilio } from "./config/twilio.js";
 import { startFeeReminderJob } from "./jobs/feeReminder.job.js";
 import { startAttendanceAlertJob } from "./jobs/attendanceAlert.job.js";
@@ -16,7 +18,9 @@ const startServer = async () => {
   console.log("\n🚀 EduManage — Coaching Management System");
   console.log("==========================================");
   try {
+    validateAuthEnv();
     await connectDB();
+    await runMigrations();
     await connectRedis();
     await connectEmail();
     connectTwilio();
@@ -50,6 +54,9 @@ const startServer = async () => {
 
       server.close(async () => {
         try {
+          // We are closing on purpose — don't let the 'disconnected' listener print a misleading
+          // "attempting reconnect" line.
+          mongoose.connection.removeAllListeners("disconnected");
           await mongoose.connection.close();
           await disconnectRedis();
           console.log("✅ Shutdown complete\n");
