@@ -38,6 +38,5 @@ const studentSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 studentSchema.index({ ownerId: 1, branchId: 1, status: 1 });
-studentSchema.index({ ownerId: 1, name: "text", phone: "text" });
 studentSchema.index({ currentBatch: 1 });
 export default mongoose.model("Student", studentSchema);

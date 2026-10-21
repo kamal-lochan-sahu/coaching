@@ -12,10 +12,10 @@ const batchSchema = new mongoose.Schema({
     startTime: String,
     endTime:   String,
   },
-  capacity: { type: Number, default: 30 },
-  enrolled: { type: Number, default: 0 },
+  capacity: { type: Number, default: 30, min: 1 },
+  enrolled: { type: Number, default: 0, min: 0 },
   feeStructure: {
-    amount:    { type: Number, required: true },
+    amount:    { type: Number, required: true, min: 0 },
     frequency: { type: String, enum: ["monthly","quarterly","yearly","one-time"], default: "monthly" },
     dueDate:   { type: Number, default: 10, min: 1, max: 28 },
   },

@@ -13,6 +13,9 @@ const attendanceSchema = new mongoose.Schema({
 }, { timestamps: true });
 attendanceSchema.index({ studentId: 1, batchId: 1, date: 1 }, { unique: true });
 attendanceSchema.index({ batchId: 1, date: 1 });
+// Dashboard, analytics and the monthly report all filter by { ownerId, date range } — the indexes above
+// start with studentId/batchId, so without this one MongoDB scans the whole (largest) collection.
+attendanceSchema.index({ ownerId: 1, date: -1 });
 export const Attendance = mongoose.model("Attendance", attendanceSchema);
 
 // ── Fee ───────────────────────────────────────────────
@@ -21,10 +24,10 @@ const feeSchema = new mongoose.Schema({
   branchId:      { type: mongoose.Schema.Types.ObjectId, ref: "Branch",  required: true },
   studentId:     { type: mongoose.Schema.Types.ObjectId, ref: "Student", required: true },
   batchId:       { type: mongoose.Schema.Types.ObjectId, ref: "Batch",   required: true },
-  amount:        { type: Number, required: true },
-  discount:      { type: Number, default: 0 },
-  lateFine:      { type: Number, default: 0 },
-  finalAmount:   { type: Number, required: true },
+  amount:        { type: Number, required: true, min: 0 },
+  discount:      { type: Number, default: 0, min: 0 },
+  lateFine:      { type: Number, default: 0, min: 0 },
+  finalAmount:   { type: Number, required: true, min: 0 },
   month:         { type: String, required: true },
   dueDate:       Date,
   paidDate:      Date,
@@ -52,11 +55,18 @@ const testSchema = new mongoose.Schema({
   name:         { type: String, required: true, trim: true },
   subject:      { type: String, trim: true },
   date:         { type: Date, required: true },
-  totalMarks:   { type: Number, required: true },
-  passingMarks: { type: Number, required: true },
+  totalMarks:   { type: Number, required: true, min: 1 },
+  passingMarks: {
+    type: Number, required: true, min: 0,
+    validate: {   // runs on create/save (this = the document)
+      validator: function (v) { return this.totalMarks === undefined || v <= this.totalMarks; },
+      message: "Passing marks cannot exceed total marks",
+    },
+  },
   createdBy:    { type: mongoose.Schema.Types.ObjectId, ref: "User" },
 }, { timestamps: true });
 testSchema.index({ batchId: 1, date: -1 });
+testSchema.index({ ownerId: 1, date: -1 });   // the tests list filters by ownerId and sorts by date
 export const Test = mongoose.model("Test", testSchema);
 
 // ── Result ────────────────────────────────────────────
