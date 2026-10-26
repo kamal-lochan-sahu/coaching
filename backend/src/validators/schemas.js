@@ -79,6 +79,7 @@ export const createStudentSchema = Joi.object({
 
 export const updateStudentSchema = Joi.object({
   branchId: objectId(),
+  batchId: objectId().allow(null, ""),     // the edit form's Batch dropdown (moves the student)
   name: Joi.string().min(2).max(100),
   phone: Joi.string().allow("").max(20),
   email: Joi.string().allow("").email(),
@@ -116,7 +117,7 @@ export const collectFeeSchema = Joi.object({
   batchId: objectId().required(),
   branchId: objectId().required(),
   amount: Joi.number().min(0).required(),
-  discount: Joi.number().min(0).max(Joi.ref("amount")).default(0),
+  discount: Joi.number().min(0).max(Joi.ref("amount")).default(0).messages({ "number.max": "discount cannot be more than the amount" }),
   paymentMode: Joi.string().valid("cash","upi","cheque","online",""),
   month: Joi.string().pattern(/^\d{4}-\d{2}$/).required(),
   note: Joi.string().allow("").max(500),
@@ -141,7 +142,7 @@ export const createTestSchema = Joi.object({
   subject: Joi.string().allow("").max(100),
   date: Joi.date().required(),
   totalMarks: Joi.number().min(1).required(),
-  passingMarks: Joi.number().min(0).max(Joi.ref("totalMarks")).required(),
+  passingMarks: Joi.number().min(0).max(Joi.ref("totalMarks")).required().messages({ "number.max": "passingMarks cannot be more than totalMarks" }),
 }).unknown(true);
 
 export const updateTestSchema = Joi.object({

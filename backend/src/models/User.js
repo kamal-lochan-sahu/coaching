@@ -20,10 +20,10 @@ const userSchema = new mongoose.Schema({
   },
   ownerId:              { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   isActive:             { type: Boolean, default: true },
-  refreshToken:         { type: String, select: false },
   lastLogin:            { type: Date, default: null },
   passwordResetToken:   { type: String, select: false },
   passwordResetExpiry:  { type: Date, select: false },
+  passwordResetAttempts:{ type: Number, default: 0, select: false },   // wrong guesses for the current reset code
 }, { timestamps: true });
 
 userSchema.pre("save", async function (next) {
@@ -39,9 +39,10 @@ userSchema.methods.comparePassword = function (candidate) {
 userSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;
-  delete obj.refreshToken;
+  delete obj.refreshToken;          // legacy field, may still exist on old documents
   delete obj.passwordResetToken;
   delete obj.passwordResetExpiry;
+  delete obj.passwordResetAttempts;
   return obj;
 };
 

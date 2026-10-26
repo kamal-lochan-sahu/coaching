@@ -5,10 +5,13 @@ import { invalidateDashboardCache } from "../config/redis.js";
 import { logAudit } from "../utils/auditLog.utils.js";
 
 export const getBatches = asyncHandler(async (req, res) => {
-  const { branchId, isActive = true } = req.query;
+  const { branchId, isActive } = req.query;
   const filter = { ownerId: req.ownerId };
   if (branchId) filter.branchId = branchId;
-  if (isActive !== "all") filter.isActive = isActive === "true";
+  // No ?isActive -> active batches only ("false" = inactive only, "all" = both). It used to default to
+  // the boolean true, which never equals the string "true", so every dropdown that calls GET /batches
+  // without a query string (Add/Edit student, Fees, Tests, Notifications, Timetable) got an EMPTY list.
+  if (isActive !== "all") filter.isActive = isActive !== "false";
 
   const batches = await Batch.find(filter).populate("teacherId","name email").sort({ createdAt: -1 });
   return res.json(new ApiResponse(200, batches));
@@ -40,7 +43,7 @@ export const updateBatch = asyncHandler(async (req, res) => {
 });
 
 export const deleteBatch = asyncHandler(async (req, res) => {
-  const activeStudents = await Student.countDocuments({ currentBatch: req.params.id, status: "active" });
+  const activeStudents = await Student.countDocuments({ ownerId: req.ownerId, currentBatch: req.params.id, status: "active" });
   if (activeStudents > 0) throw new ApiError(400, `Cannot delete — ${activeStudents} active students in this batch`);
   const batch = await Batch.findOneAndUpdate({ _id: req.params.id, ownerId: req.ownerId }, { isActive: false }, { new: true });
   await invalidateDashboardCache(req.ownerId);
@@ -49,6 +52,7 @@ export const deleteBatch = asyncHandler(async (req, res) => {
 });
 
 export const getBatchStudents = asyncHandler(async (req, res) => {
-  const students = await Student.find({ currentBatch: req.params.id, status: "active" }).sort({ name: 1 });
+  // ownerId matters: without it any logged-in user could list another institute's students by batch id
+  const students = await Student.find({ ownerId: req.ownerId, currentBatch: req.params.id, status: "active" }).sort({ name: 1 });
   return res.json(new ApiResponse(200, students));
 });

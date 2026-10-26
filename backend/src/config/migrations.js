@@ -1,5 +1,7 @@
 import { Fee } from "../models/Academic.js";
 import Student from "../models/Student.js";
+import User from "../models/User.js";
+import Batch from "../models/Batch.js";
 
 // One-time data/index migrations. Every step is idempotent (safe to run on every startup),
 // and a failure only logs a warning — it never stops the server from starting.
@@ -48,7 +50,57 @@ const dropUnusedStudentTextIndex = async () => {
   }
 };
 
+// v4 — refresh tokens used to be stored in PLAIN TEXT on the user document (field `refreshToken`).
+// Sessions now live in their own collection as hashes; wipe the old plaintext values.
+const removeLegacyRefreshTokens = async () => {
+  try {
+    const r = await User.collection.updateMany({ refreshToken: { $exists: true } }, { $unset: { refreshToken: "" } });
+    if (r.modifiedCount) console.log(`🧹 Migration: removed ${r.modifiedCount} plaintext refresh token(s) from users`);
+  } catch (e) {
+    console.warn(`⚠️  Migration (remove legacy refresh tokens): ${e.message}`);
+  }
+};
+
+// v5 — admission numbers are unique PER INSTITUTE (ownerId + admissionNumber) instead of across all
+// institutes. Same safe order as the receipt index: build the new one first, drop the old one after.
+const migrateAdmissionIndex = async () => {
+  try {
+    await Student.createIndexes();
+  } catch (e) {
+    console.warn(`⚠️  Migration: could not build the (ownerId, admissionNumber) index — keeping the legacy one. ${e.message}`);
+    return;
+  }
+  try {
+    await Student.collection.dropIndex("admissionNumber_1");
+    console.log("🧹 Migration: dropped legacy global admissionNumber index");
+  } catch (e) {
+    if (!isMissingIndexError(e)) console.warn(`⚠️  Migration (drop legacy admission index): ${e.message}`);
+  }
+};
+
+// v6 — Batch.enrolled used to drift (never decreased when a student was deleted / passed / dropped).
+// Recount it from the real students once at startup; afterwards every student change recounts it.
+const recountBatchEnrollment = async () => {
+  try {
+    const batches = await Batch.collection.find({}, { projection: { _id: 1, ownerId: 1, enrolled: 1 } }).toArray();
+    let fixed = 0;
+    for (const b of batches) {
+      const real = await Student.countDocuments({ ownerId: b.ownerId, currentBatch: b._id, status: "active" });
+      if (real !== b.enrolled) {
+        await Batch.collection.updateOne({ _id: b._id }, { $set: { enrolled: real } });
+        fixed++;
+      }
+    }
+    if (fixed) console.log(`🧹 Migration: corrected the student count on ${fixed} batch(es)`);
+  } catch (e) {
+    console.warn(`⚠️  Migration (recount batch enrollment): ${e.message}`);
+  }
+};
+
 export const runMigrations = async () => {
   await migrateReceiptIndex();
   await dropUnusedStudentTextIndex();
+  await removeLegacyRefreshTokens();
+  await migrateAdmissionIndex();
+  await recountBatchEnrollment();
 };

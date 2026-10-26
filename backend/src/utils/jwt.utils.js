@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import jwt from "jsonwebtoken";
 
 const ALGORITHM = "HS256";
@@ -17,8 +18,8 @@ export const validateAuthEnv = () => {
 
 // Every token carries a `type`, so a refresh token can never be used as an access token
 // (or the other way round) — even if both secrets were accidentally set to the same value.
-const sign = (payload, secret, expiresIn, type) =>
-  jwt.sign({ ...payload, type }, secret, { expiresIn, algorithm: ALGORITHM });
+const sign = (payload, secret, expiresIn, type, extra = {}) =>
+  jwt.sign({ ...payload, type }, secret, { expiresIn, algorithm: ALGORITHM, ...extra });
 
 // Tokens issued BEFORE the `type` claim existed have no `type`. They are still accepted so
 // nobody is logged out by this update; they all expire within 7 days of the deploy.
@@ -32,7 +33,8 @@ export const generateAccessToken = (payload) =>
   sign(payload, process.env.JWT_SECRET, process.env.JWT_EXPIRY || "15m", "access");
 
 export const generateRefreshToken = (payload) =>
-  sign(payload, process.env.REFRESH_TOKEN_SECRET, process.env.REFRESH_TOKEN_EXPIRY || "7d", "refresh");
+  // jwtid makes every refresh token unique — two logins in the same second must not produce the same token
+  sign(payload, process.env.REFRESH_TOKEN_SECRET, process.env.REFRESH_TOKEN_EXPIRY || "7d", "refresh", { jwtid: crypto.randomUUID() });
 
 export const verifyAccessToken = (token) =>
   verify(token, process.env.JWT_SECRET, "access");
@@ -48,9 +50,8 @@ export const generateTokenPair = (userId, role, ownerId) => {
   };
 };
 
-export const REFRESH_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "strict",
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-};
+// Refresh tokens are stored hashed (see models/Session.js) — never in plain text.
+export const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
+
+// Expiry of a token we just signed, as a Date (used for the Session TTL).
+export const getTokenExpiry = (token) => new Date(jwt.decode(token).exp * 1000);

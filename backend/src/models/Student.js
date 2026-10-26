@@ -22,7 +22,7 @@ const studentSchema = new mongoose.Schema({
   currentBatch:     { type: mongoose.Schema.Types.ObjectId, ref: "Batch", default: null },
   previousBatches:  [{ type: mongoose.Schema.Types.ObjectId, ref: "Batch" }],
   admissionDate:    { type: Date, default: Date.now },
-  admissionNumber:  { type: String, unique: true, sparse: true },
+  admissionNumber:  { type: String },   // unique per institute — see the (ownerId, admissionNumber) index below
   status:           { type: String, enum: ["active", "inactive", "passed", "dropped"], default: "active" },
 
   // Documents
@@ -39,4 +39,9 @@ const studentSchema = new mongoose.Schema({
 
 studentSchema.index({ ownerId: 1, branchId: 1, status: 1 });
 studentSchema.index({ currentBatch: 1 });
+// Unique per institute (NOT global). Partial, so students without a number never clash.
+studentSchema.index(
+  { ownerId: 1, admissionNumber: 1 },
+  { unique: true, partialFilterExpression: { admissionNumber: { $type: "string" } } }
+);
 export default mongoose.model("Student", studentSchema);
