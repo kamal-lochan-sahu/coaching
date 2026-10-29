@@ -5,29 +5,59 @@ import Branch from "../models/Branch.js";
 import User from "../models/User.js";
 import { ApiError, ApiResponse, asyncHandler } from "../utils/ApiHelpers.js";
 import { withReceiptNumber } from "../utils/receiptNumber.utils.js";
+import { withLock } from "../utils/lock.utils.js";
+import { MONTH_PATTERN, toDateOnly } from "../utils/date.utils.js";
 import { invalidateDashboardCache, invalidateRevenueCache } from "../config/redis.js";
 import { generateFeeReceiptPDF } from "../services/report.service.js";
 import { sendCSV } from "../utils/csv.utils.js";
 import { sendEmail, emailTemplates } from "../config/email.js";
 import { logAudit } from "../utils/auditLog.utils.js";
 
+const FEE_STATUSES = ["pending", "paid", "partial", "waived"];
+
+const clampInt = (value, fallback, min, max) => {
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) ? Math.min(Math.max(n, min), max) : fallback;
+};
+
+// Query-string values must be plain strings (?status[$ne]=x would arrive as an object).
+const queryString = (value, name) => {
+  if (value === undefined || value === "") return undefined;
+  if (typeof value !== "string") throw new ApiError(400, `Invalid ${name}`);
+  return value;
+};
+const queryMonth = (value) => {
+  const month = queryString(value, "month");
+  if (month !== undefined && !MONTH_PATTERN.test(month)) throw new ApiError(400, "month must look like 2026-10");
+  return month;
+};
+const queryStatus = (value) => {
+  const status = queryString(value, "status");
+  if (status !== undefined && !FEE_STATUSES.includes(status)) throw new ApiError(400, "Invalid status");
+  return status;
+};
+
 export const getFees = asyncHandler(async (req, res) => {
-  const { branchId, month, status, page = 1, limit = 20 } = req.query;
+  const branchId = queryString(req.query.branchId, "branchId");
+  const month    = queryMonth(req.query.month);
+  const status   = queryStatus(req.query.status);
+  const page  = clampInt(req.query.page, 1, 1, 100000);
+  const limit = clampInt(req.query.limit, 20, 1, 100);
+
   const filter = { ownerId: req.ownerId };
   if (branchId) filter.branchId = branchId;
   if (month)    filter.month    = month;
   if (status)   filter.status   = status;
 
-  const skip = (Number(page) - 1) * Number(limit);
   const [fees, total] = await Promise.all([
     Fee.find(filter)
       .populate("studentId","name phone guardianPhone")
       .populate("batchId","name")
       .sort({ createdAt: -1 })
-      .skip(skip).limit(Number(limit)),
+      .skip((page - 1) * limit).limit(limit),
     Fee.countDocuments(filter),
   ]);
-  return res.json(new ApiResponse(200, { fees, total, page: Number(page), pages: Math.ceil(total / Number(limit)) }));
+  return res.json(new ApiResponse(200, { fees, total, page, pages: Math.ceil(total / limit) }));
 });
 
 export const collectFee = asyncHandler(async (req, res) => {
@@ -48,54 +78,62 @@ export const collectFee = asyncHandler(async (req, res) => {
   ]);
   if (!studentOk || !batchOk || !branchOk) throw new ApiError(404, "Student, batch or branch not found");
 
-  // Update the existing pending fee OR create a new paid record. withReceiptNumber()
-  // picks the next receipt number for this institute and retries if two staff members
-  // collect at the exact same moment (the unique index rejects the duplicate).
-  const fee = await withReceiptNumber(Fee, req.ownerId, async (receiptNumber) => {
-    const existingPending = await Fee.findOne({
-      studentId, batchId, month, status: "pending", ownerId: req.ownerId,
-    });
+  // One collection per student + month at a time: a double click, or two staff members at the same
+  // moment, used to pass the "already paid?" check together and record the payment twice.
+  // withReceiptNumber() picks the next receipt number for this institute and retries if two
+  // different students are collected at the exact same moment (the unique index rejects the duplicate).
+  const fee = await withLock(`collect:${req.ownerId}:${studentId}:${month}`, () =>
+    withReceiptNumber(Fee, req.ownerId, async (receiptNumber) => {
+      const existingPending = await Fee.findOne({
+        studentId, batchId, month, status: "pending", ownerId: req.ownerId,
+      });
 
-    if (existingPending) {
-      existingPending.amount        = Number(amount);
-      existingPending.discount      = Number(discount);
-      existingPending.finalAmount   = finalAmount;
-      existingPending.paidDate      = new Date();
-      existingPending.paymentMode   = paymentMode;
-      existingPending.receiptNumber = receiptNumber;
-      existingPending.status        = "paid";
-      existingPending.collectedBy   = req.user._id;
-      existingPending.note          = note || "";
-      await existingPending.save();
-      return existingPending;
-    }
+      if (existingPending) {
+        existingPending.amount        = Number(amount);
+        existingPending.discount      = Number(discount);
+        existingPending.finalAmount   = finalAmount;
+        existingPending.paidDate      = new Date();
+        existingPending.paymentMode   = paymentMode;
+        existingPending.receiptNumber = receiptNumber;
+        existingPending.status        = "paid";
+        existingPending.collectedBy   = req.user._id;
+        existingPending.note          = note || "";
+        await existingPending.save();
+        return existingPending;
+      }
 
-    // Check not already paid this month
-    const alreadyPaid = await Fee.findOne({
-      studentId, month, status: "paid", ownerId: req.ownerId,
-    });
-    if (alreadyPaid) {
-      throw new ApiError(409, `Fee already collected for ${month}. Receipt: ${alreadyPaid.receiptNumber}`);
-    }
-    return Fee.create({
-      ownerId: req.ownerId, branchId, studentId, batchId,
-      amount: Number(amount), discount: Number(discount), finalAmount,
-      month, paymentMode,
-      paidDate: new Date(),
-      receiptNumber,
-      status: "paid",
-      collectedBy: req.user._id,
-      note: note || "",
-    });
-  });
+      // Check not already paid this month
+      const alreadyPaid = await Fee.findOne({
+        studentId, month, status: "paid", ownerId: req.ownerId,
+      });
+      if (alreadyPaid) {
+        throw new ApiError(409, `Fee already collected for ${month}. Receipt: ${alreadyPaid.receiptNumber}`);
+      }
+      return Fee.create({
+        ownerId: req.ownerId, branchId, studentId, batchId,
+        amount: Number(amount), discount: Number(discount), finalAmount,
+        month, paymentMode,
+        paidDate: new Date(),
+        receiptNumber,
+        status: "paid",
+        collectedBy: req.user._id,
+        note: note || "",
+      });
+    })
+  );
   const receiptNumber = fee.receiptNumber;
 
   const populated = await fee.populate("studentId","name phone guardianPhone guardianName email");
   await invalidateDashboardCache(req.ownerId);
   await invalidateRevenueCache(req.ownerId);
 
-  // Best-effort: email a copy of the receipt if the student has an email on file.
-  // Never blocks or fails the fee-collection response.
+  logAudit({ req, action:"collect_fee", entityType:"Fee", entityId:fee._id,
+    description:`Collected ₹${finalAmount.toLocaleString("en-IN")} fee from "${populated.studentId.name}" (${month})` });
+
+  res.status(201).json(new ApiResponse(201, populated, "Fee collected successfully"));
+
+  // Best-effort: email a copy of the receipt if the student has an email on file. This runs AFTER the
+  // response has gone out, so a slow or broken mail server can never hold up (or fail) a collection.
   if (populated.studentId?.email) {
     try {
       const owner = await User.findById(req.ownerId).select("branding");
@@ -105,20 +143,16 @@ export const collectFee = asyncHandler(async (req, res) => {
         to: populated.studentId.email,
         subject: `Fee Receipt — ${receiptNumber}`,
         html: emailTemplates.feeReceipt(instituteName, brandColor, populated.studentId.name, finalAmount, receiptNumber, month),
+        fromName: instituteName,
       });
     } catch (e) {
       console.error(`Fee receipt email failed: ${e.message}`);
     }
   }
-
-  logAudit({ req, action:"collect_fee", entityType:"Fee", entityId:fee._id,
-    description:`Collected ₹${finalAmount.toLocaleString("en-IN")} fee from "${populated.studentId.name}" (${month})` });
-
-  return res.status(201).json(new ApiResponse(201, populated, "Fee collected successfully"));
 });
 
 export const getPendingFees = asyncHandler(async (req, res) => {
-  const { branchId } = req.query;
+  const branchId = queryString(req.query.branchId, "branchId");
   const filter = { ownerId: req.ownerId, status: "pending" };
   if (branchId) filter.branchId = branchId;
 
@@ -132,7 +166,9 @@ export const getPendingFees = asyncHandler(async (req, res) => {
 });
 
 export const getStudentFees = asyncHandler(async (req, res) => {
-  const fees = await Fee.find({ studentId: req.params.studentId })
+  // ownerId on BOTH queries: without it any logged-in user could read another institute's fees by student id
+  if (!(await Student.exists({ _id: req.params.studentId, ownerId: req.ownerId }))) throw new ApiError(404, "Student not found");
+  const fees = await Fee.find({ ownerId: req.ownerId, studentId: req.params.studentId })
     .populate("batchId","name")
     .sort({ createdAt: -1 });
   return res.json(new ApiResponse(200, fees));
@@ -142,12 +178,21 @@ export const waiveFee = asyncHandler(async (req, res) => {
   const { reason } = req.body;
   if (!reason) throw new ApiError(400, "Reason is required to waive a fee");
 
+  // Only a PENDING fee can be waived. A paid fee has a receipt and counts as revenue — waiving it
+  // used to silently remove that money from the reports. (The status is part of the filter, so two
+  // people clicking at once cannot both succeed.)
   const fee = await Fee.findOneAndUpdate(
-    { _id: req.params.id, ownerId: req.ownerId },
+    { _id: req.params.id, ownerId: req.ownerId, status: "pending" },
     { status: "waived", note: reason },
     { new: true }
   ).populate("studentId", "name");
-  if (!fee) throw new ApiError(404, "Fee record not found");
+
+  if (!fee) {
+    const existing = await Fee.findOne({ _id: req.params.id, ownerId: req.ownerId }).select("status");
+    if (!existing) throw new ApiError(404, "Fee record not found");
+    throw new ApiError(400, `Only pending fees can be waived (this fee is ${existing.status})`);
+  }
+
   await invalidateDashboardCache(req.ownerId);
   logAudit({ req, action:"waive_fee", entityType:"Fee", entityId:fee._id,
     description:`Waived ₹${fee.finalAmount.toLocaleString("en-IN")} fee for "${fee.studentId?.name||"student"}" — reason: ${reason}` });
@@ -155,7 +200,7 @@ export const waiveFee = asyncHandler(async (req, res) => {
 });
 
 export const getFeeReport = asyncHandler(async (req, res) => {
-  const { month } = req.query;
+  const month = queryMonth(req.query.month);
   const filter = { ownerId: req.ownerId, status: "paid" };
   if (month) filter.month = month;
 
@@ -172,7 +217,8 @@ export const getFeeReport = asyncHandler(async (req, res) => {
 
 // GET /api/fees/export/csv?month=YYYY-MM&status=paid
 export const exportFeesCSV = asyncHandler(async (req, res) => {
-  const { month, status } = req.query;
+  const month  = queryMonth(req.query.month);
+  const status = queryStatus(req.query.status);
   const filter = { ownerId: req.ownerId };
   if (month)  filter.month  = month;
   if (status) filter.status = status;
@@ -195,34 +241,55 @@ export const exportFeesCSV = asyncHandler(async (req, res) => {
 });
 
 export const generateFeeForBatch = asyncHandler(async (req, res) => {
-  const { batchId, branchId, month, dueDate } = req.body;
+  const { batchId, month, dueDate } = req.body;
   if (!batchId || !month) throw new ApiError(400, "batchId and month required");
 
-  const Batch    = (await import("../models/Batch.js")).default;
-  const students = await Student.find({ currentBatch: batchId, status: "active" });
-  const batch    = await Batch.findById(batchId);
+  // The batch must be this institute's own (it used to be looked up by id alone, so another
+  // institute's batch id produced fee records here for THAT institute's students — whose names and
+  // phone numbers then showed up in this institute's fee list).
+  const batch = await Batch.findOne({ _id: batchId, ownerId: req.ownerId });
   if (!batch) throw new ApiError(404, "Batch not found");
+  if (!batch.isActive) throw new ApiError(400, "This batch is not active");
 
-  const existing    = await Fee.find({ batchId, month, ownerId: req.ownerId });
-  const existingIds = new Set(existing.map(f => f.studentId.toString()));
+  // Due date: the one picked on the form, otherwise the batch's own due day of that month. It was left
+  // empty before, and the daily fee-reminder job only looks at fees that HAVE a due date — so those
+  // fees never got a reminder.
+  let due = dueDate ? toDateOnly(dueDate) : null;
+  if (dueDate && !due) throw new ApiError(400, "Invalid due date");
+  if (!due) {
+    const [year, m] = month.split("-").map(Number);
+    due = new Date(Date.UTC(year, m - 1, batch.feeStructure?.dueDate || 10));   // 10 = the batch model's own default
+  }
 
-  const newFees = students
-    .filter(s => !existingIds.has(s._id.toString()))
-    .map(s => ({
-      ownerId: req.ownerId, branchId,
-      studentId:   s._id,
-      batchId,
-      amount:      batch.feeStructure.amount,
-      discount:    0,
-      finalAmount: batch.feeStructure.amount,
-      month,
-      dueDate:     dueDate ? new Date(dueDate) : null,
-      status:      "pending",
-    }));
+  // Two clicks / two staff members generating the same batch + month at once would both see "no fees
+  // yet" and create everything twice.
+  const { created, alreadyThere } = await withLock(`generate:${req.ownerId}:${batch._id}:${month}`, async () => {
+    const students = await Student.find({ ownerId: req.ownerId, currentBatch: batch._id, status: "active" });
+    const existing = await Fee.find({ batchId: batch._id, month, ownerId: req.ownerId });
+    const existingIds = new Set(existing.map((f) => f.studentId.toString()));
 
-  if (newFees.length) await Fee.insertMany(newFees);
+    const newFees = students
+      .filter((s) => !existingIds.has(s._id.toString()))
+      .map((s) => ({
+        ownerId: req.ownerId, branchId: batch.branchId,   // branch comes from the batch, not the client
+        studentId:   s._id,
+        batchId:     batch._id,
+        amount:      batch.feeStructure.amount,
+        discount:    0,
+        finalAmount: batch.feeStructure.amount,
+        month,
+        dueDate:     due,
+        status:      "pending",
+      }));
+
+    if (newFees.length) await Fee.insertMany(newFees);
+    return { created: newFees.length, alreadyThere: existingIds.size };
+  });
+
   await invalidateDashboardCache(req.ownerId);
-  return res.json(new ApiResponse(200, null, `Fee generated for ${newFees.length} students (${existingIds.size} already existed)`));
+  logAudit({ req, action:"generate_fees", entityType:"Batch", entityId:batch._id,
+    description:`Generated ${created} fee record(s) of ₹${batch.feeStructure.amount} for batch "${batch.name}" (${month})` });
+  return res.json(new ApiResponse(200, null, `Fee generated for ${created} students (${alreadyThere} already existed)`));
 });
 
 // GET /api/fees/:id/receipt — stream a PDF receipt for a paid fee

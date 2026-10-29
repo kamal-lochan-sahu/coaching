@@ -108,7 +108,7 @@ export const markAttendanceSchema = Joi.object({
       status: Joi.string().valid("present","absent","late","holiday").required(),
       note: Joi.string().allow("").max(200),
     })
-  ).min(1).required(),
+  ).min(1).max(500).required(),
 }).unknown(true);
 
 /* ── Fee ───────────────────────────────────────────── */
@@ -119,7 +119,7 @@ export const collectFeeSchema = Joi.object({
   amount: Joi.number().min(0).required(),
   discount: Joi.number().min(0).max(Joi.ref("amount")).default(0).messages({ "number.max": "discount cannot be more than the amount" }),
   paymentMode: Joi.string().valid("cash","upi","cheque","online",""),
-  month: Joi.string().pattern(/^\d{4}-\d{2}$/).required(),
+  month: Joi.string().pattern(/^\d{4}-(0[1-9]|1[0-2])$/).required(),
   note: Joi.string().allow("").max(500),
 }).unknown(true);
 
@@ -130,7 +130,7 @@ export const waiveFeeSchema = Joi.object({
 export const generateFeeForBatchSchema = Joi.object({
   batchId: objectId().required(),
   branchId: objectId(),
-  month: Joi.string().pattern(/^\d{4}-\d{2}$/).required(),
+  month: Joi.string().pattern(/^\d{4}-(0[1-9]|1[0-2])$/).required(),
   dueDate: Joi.date().allow(null, ""),
 }).unknown(true);
 
